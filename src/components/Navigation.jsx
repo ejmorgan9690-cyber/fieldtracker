@@ -16,6 +16,7 @@ export default function Navigation() {
                 <HardHat className="h-6 w-6 text-white" />
               </div>
               <span className="font-bold text-2xl text-slate-900 tracking-tight">Field Tracker</span>
+              <span className="ml-3 text-xs font-bold text-indigo-600 bg-indigo-100 px-2 py-1 rounded-full">v1.0.1</span>
             </div>
             
             {/* Mobile Logout (shows on mobile) */}
