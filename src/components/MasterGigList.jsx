@@ -10,7 +10,7 @@ export default function MasterGigList() {
   // Combine legacy and new gigs
   const gigList = useMemo(() => {
     const legacy = entries
-      .filter(e => e.taskType === 'Hand Holes' && e.handHoleStatus === 'Not Complete')
+      .filter(e => e.taskType === 'Hand Hole' && e.handHoleStatus === 'Not Complete')
       .map(e => ({
         id: e.id,
         date: e.date,
@@ -39,7 +39,7 @@ export default function MasterGigList() {
   }, [entries, gigs, filterDate, filterInspector]);
 
   const uniqueInspectors = useMemo(() => {
-    const legacyInspectors = entries.filter(e => e.taskType === 'Hand Holes' && e.handHoleStatus === 'Not Complete').map(e => e.inspector);
+    const legacyInspectors = entries.filter(e => e.taskType === 'Hand Hole' && e.handHoleStatus === 'Not Complete').map(e => e.inspector);
     const newInspectors = gigs.map(g => g.inspector);
     const inspectors = new Set([...legacyInspectors, ...newInspectors]);
     return Array.from(inspectors).filter(Boolean).sort();

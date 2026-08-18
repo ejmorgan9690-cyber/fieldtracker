@@ -10,7 +10,7 @@ export default function MasterDashboard() {
 
   // Group by Date -> Inspector -> RDTSection -> Route -> Location -> TaskType -> BoreNumber -> FiberCount -> Total Footage
   const aggregatedData = useMemo(() => {
-    let filtered = entries.filter(e => !(e.taskType === 'Hand Holes' && e.handHoleStatus === 'Not Complete') && e.taskType !== 'Drop');
+    let filtered = entries.filter(e => !(e.taskType === 'Hand Hole' && e.handHoleStatus === 'Not Complete') && e.taskType !== 'Drop');
     if (filterDate) {
       filtered = filtered.filter(e => e.date === filterDate);
     }
@@ -63,11 +63,11 @@ export default function MasterDashboard() {
   }, [entries, filterDate, filterInspector]);
 
   // Overall totals (excluding incomplete Hand Holes and DROPs)
-  const validEntries = useMemo(() => entries.filter(e => !(e.taskType === 'Hand Holes' && e.handHoleStatus === 'Not Complete') && e.taskType !== 'Drop'), [entries]);
+  const validEntries = useMemo(() => entries.filter(e => !(e.taskType === 'Hand Hole' && e.handHoleStatus === 'Not Complete') && e.taskType !== 'Drop'), [entries]);
   const totalBore = useMemo(() => validEntries.filter(e => e.taskType === 'Bore').reduce((sum, e) => sum + e.footage, 0), [validEntries]);
   const totalPlow = useMemo(() => validEntries.filter(e => e.taskType === 'Plow Duct').reduce((sum, e) => sum + e.footage, 0), [validEntries]);
   const totalFiber = useMemo(() => validEntries.filter(e => e.taskType === 'Fiber').reduce((sum, e) => sum + e.footage, 0), [validEntries]);
-  const totalHandHoles = useMemo(() => validEntries.filter(e => e.taskType === 'Hand Holes').reduce((sum, e) => sum + e.footage, 0), [validEntries]);
+  const totalHandHoles = useMemo(() => validEntries.filter(e => e.taskType === 'Hand Hole').reduce((sum, e) => sum + e.footage, 0), [validEntries]);
 
   const uniqueInspectors = useMemo(() => {
     const inspectors = new Set(validEntries.map(e => e.inspector));
@@ -203,7 +203,7 @@ export default function MasterDashboard() {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-bold text-slate-900">
-                      {row.totalFootage.toLocaleString()} <span className="text-slate-500 font-medium">{row.taskType === 'Hand Holes' || row.taskType === 'Drop' ? 'qty' : 'ft'}</span>
+                      {row.totalFootage.toLocaleString()} <span className="text-slate-500 font-medium">{row.taskType === 'Hand Hole' || row.taskType === 'Drop' ? 'qty' : 'ft'}</span>
                     </td>
                   </tr>
                 ))}

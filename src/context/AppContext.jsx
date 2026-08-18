@@ -52,7 +52,7 @@ export const AppProvider = ({ children }) => {
             footage: row.footage,
             boreNumber: row.task_type === 'Bore' ? row.spec_number : null,
             fiberCount: row.task_type === 'Fiber' ? row.spec_number : null,
-            handHoleNumber: row.task_type === 'Hand Holes' ? row.spec_number : null,
+            handHoleNumber: row.task_type === 'Hand Hole' ? row.spec_number : null,
             dropNumber: row.task_type === 'Drop' ? row.spec_number : null,
           }));
           setEntries(mappedEntries);
@@ -128,7 +128,7 @@ export const AppProvider = ({ children }) => {
       // Consolidate conditional fields into a single spec_number string
       const specNumber = entry.taskType === 'Bore' ? entry.boreNumber :
                          entry.taskType === 'Fiber' ? entry.fiberCount :
-                         entry.taskType === 'Hand Holes' ? entry.handHoleNumber :
+                         entry.taskType === 'Hand Hole' ? entry.handHoleNumber :
                          entry.taskType === 'Drop' ? entry.dropNumber : null;
 
       const supabasePayload = {

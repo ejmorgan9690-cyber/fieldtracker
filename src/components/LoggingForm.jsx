@@ -4,7 +4,7 @@ import { Save, CheckCircle, FileSignature, Calendar, User } from 'lucide-react';
 
 const RDT_SECTIONS = [...Array.from({ length: 10 }, (_, i) => `RDT${i + 1}`), 'Toll N', 'Toll S'];
 const ROUTES = Array.from({ length: 20 }, (_, i) => `Route ${i + 1}`);
-const TASK_TYPES = ['Bore', 'Plow Duct', 'Fiber', 'Hand Holes', 'Drop'];
+const TASK_TYPES = ['Bore', 'Plow Duct', 'Fiber', 'Hand Hole', 'Drop'];
 const FIBER_COUNTS = ['4 count', '12 count', '24 count', '48 count', '96 count', '144 count', '288 count'];
 const BORE_NUMBERS = Array.from({ length: 30 }, (_, i) => `${i + 1}`);
 
@@ -119,7 +119,7 @@ export default function LoggingForm() {
   }, [rdtSection]);
 
   useEffect(() => {
-    if (taskType === 'Hand Holes' && !handHoleOptions.includes(String(handHoleNumber))) {
+    if (taskType === 'Hand Hole' && !handHoleOptions.includes(String(handHoleNumber))) {
       setHandHoleNumber('0');
     }
     if (taskType !== 'Drop' && !locationOptions.includes(String(location))) {
@@ -130,7 +130,7 @@ export default function LoggingForm() {
   const handleSubmit = (e) => {
     e.preventDefault();
     
-    if (taskType !== 'Drop' && (!footage || isNaN(footage) || Number(footage) <= 0)) {
+    if (taskType !== 'Drop' && taskType !== 'Hand Hole' && (!footage || isNaN(footage) || Number(footage) <= 0)) {
       alert('Please enter a valid positive quantity/footage.');
       return;
     }
@@ -141,15 +141,15 @@ export default function LoggingForm() {
       taskType,
       boreNumber: taskType === 'Bore' ? boreNumber : null,
       fiberCount: taskType === 'Fiber' ? fiberCount : null,
-      handHoleNumber: taskType === 'Hand Holes' ? handHoleNumber : null,
+      handHoleNumber: taskType === 'Hand Hole' ? handHoleNumber : null,
       dropNumber: taskType === 'Drop' ? dropNumber : null,
       rdtSection: taskType === 'Drop' ? '-' : rdtSection,
       route: taskType === 'Drop' || rdtSection === 'Toll N' || rdtSection === 'Toll S' ? '-' : route,
       location: taskType === 'Drop' ? '-' : location,
-      footage: taskType === 'Drop' ? 1 : Number(footage),
+      footage: taskType === 'Drop' || taskType === 'Hand Hole' ? 1 : Number(footage),
     });
 
-    if (taskType !== 'Drop') setFootage('');
+    if (taskType !== 'Drop' && taskType !== 'Hand Hole') setFootage('');
     setDropNumber('');
     setSuccessMsg(true);
     setTimeout(() => setSuccessMsg(false), 3000);
@@ -281,11 +281,11 @@ export default function LoggingForm() {
                     required 
                   />
                 </div>
-              ) : taskType === 'Hand Holes' ? (
+              ) : taskType === 'Hand Hole' ? (
                 <div className="animate-in fade-in slide-in-from-top-2">
                   <Combobox 
                     id="handHoleNumber" 
-                    label="Hand Hole Number" 
+                    label="Location" 
                     value={handHoleNumber} 
                     onChange={setHandHoleNumber} 
                     options={handHoleOptions} 
@@ -313,7 +313,7 @@ export default function LoggingForm() {
           </div>
 
           {/* Section 3: Output */}
-          {taskType !== 'Drop' && (
+          {taskType !== 'Drop' && taskType !== 'Hand Hole' && (
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 animate-in fade-in">
               <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-6 border-b border-slate-100 pb-3">3. Production Output</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -328,7 +328,7 @@ export default function LoggingForm() {
                       onChange={(e) => setFootage(e.target.value)}
                       className="block w-full px-4 py-3 rounded-lg border border-slate-300 bg-white text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 shadow-sm transition-all font-medium"
                       placeholder="e.g. 1500"
-                      required={taskType !== 'Drop'}
+                      required={taskType !== 'Drop' && taskType !== 'Hand Hole'}
                     />
                     <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none">
                       <span className="text-slate-400 font-medium">ft / qty</span>

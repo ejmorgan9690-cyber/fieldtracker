@@ -9,7 +9,7 @@ export default function MyHistory() {
   // Filter for only current user's entries
   const myEntries = useMemo(() => {
     return entries
-      .filter(e => e.inspector === authUser?.name && !(e.taskType === 'Hand Holes' && e.handHoleStatus === 'Not Complete'))
+      .filter(e => e.inspector === authUser?.name && !(e.taskType === 'Hand Hole' && e.handHoleStatus === 'Not Complete'))
       .sort((a, b) => new Date(b.date) - new Date(a.date));
   }, [entries, authUser]);
 
@@ -106,7 +106,7 @@ export default function MyHistory() {
                         </span>
                       </td>
                       <td className="px-8 py-4 whitespace-nowrap text-sm text-right font-bold text-slate-900">
-                        {row.footage.toLocaleString()} <span className="text-slate-500 font-medium">{row.taskType === 'Hand Holes' || row.taskType === 'Drop' ? 'qty' : 'ft'}</span>
+                        {row.footage.toLocaleString()} <span className="text-slate-500 font-medium">{row.taskType === 'Hand Hole' || row.taskType === 'Drop' ? 'qty' : 'ft'}</span>
                       </td>
                       <td className="px-8 py-4 whitespace-nowrap text-center">
                         <button

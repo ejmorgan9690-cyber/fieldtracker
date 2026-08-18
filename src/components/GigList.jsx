@@ -31,7 +31,7 @@ export default function GigList() {
   // Combine legacy hand holes with new gig entries
   const myGigList = useMemo(() => {
     const legacy = entries
-      .filter(e => e.inspector === authUser?.name && e.taskType === 'Hand Holes' && e.handHoleStatus === 'Not Complete')
+      .filter(e => e.inspector === authUser?.name && e.taskType === 'Hand Hole' && e.handHoleStatus === 'Not Complete')
       .map(e => ({
         id: e.id,
         date: e.date,
