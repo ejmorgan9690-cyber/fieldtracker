@@ -35,8 +35,40 @@ export const AppProvider = ({ children }) => {
   }, [users]);
 
   useEffect(() => {
-    const savedEntries = localStorage.getItem('fieldTrackerEntries');
-    if (savedEntries) setEntries(JSON.parse(savedEntries));
+    const fetchEntries = async () => {
+      try {
+        const { data, error } = await supabase.from('production_logs').select('*');
+        if (error) {
+          console.error('Error fetching from Supabase:', error);
+        } else if (data) {
+          const mappedEntries = data.map(row => ({
+            id: row.id || Date.now().toString() + Math.random(),
+            inspector: row.inspector_name,
+            date: row.service_date,
+            taskType: row.task_type,
+            rdtSection: row.section,
+            route: row.route,
+            location: row.location,
+            footage: row.footage,
+            boreNumber: row.task_type === 'Bore' ? row.spec_number : null,
+            fiberCount: row.task_type === 'Fiber' ? row.spec_number : null,
+            handHoleNumber: row.task_type === 'Hand Holes' ? row.spec_number : null,
+            dropNumber: row.task_type === 'Drop' ? row.spec_number : null,
+          }));
+          setEntries(mappedEntries);
+          localStorage.setItem('fieldTrackerEntries', JSON.stringify(mappedEntries));
+          return;
+        }
+      } catch (err) {
+        console.error('Unexpected error fetching from Supabase:', err);
+      }
+      
+      // Fallback to local storage if Supabase fails
+      const savedEntries = localStorage.getItem('fieldTrackerEntries');
+      if (savedEntries) setEntries(JSON.parse(savedEntries));
+    };
+
+    fetchEntries();
 
     const savedDailies = localStorage.getItem('fieldTrackerDailies');
     if (savedDailies) setDailies(JSON.parse(savedDailies));
