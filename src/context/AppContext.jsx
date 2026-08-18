@@ -1,4 +1,5 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
+import { supabase } from '../supabaseClient';
 
 export const formatDate = (dateString) => {
   if (!dateString) return '';
@@ -88,10 +89,27 @@ export const AppProvider = ({ children }) => {
     localStorage.removeItem('fieldTrackerAuth');
   };
 
-  const addEntry = (entry) => {
-    const newEntries = [...entries, { ...entry, id: Date.now().toString() }];
-    setEntries(newEntries);
-    localStorage.setItem('fieldTrackerEntries', JSON.stringify(newEntries));
+  const addEntry = async (entry) => {
+    try {
+      const { data, error } = await supabase
+        .from('entries')
+        .insert([entry])
+        .select();
+
+      if (error) {
+        console.error('Error saving to Supabase:', error);
+      }
+
+      const newEntry = data && data.length > 0 ? data[0] : { ...entry, id: Date.now().toString() };
+      const newEntries = [...entries, newEntry];
+      setEntries(newEntries);
+      localStorage.setItem('fieldTrackerEntries', JSON.stringify(newEntries));
+    } catch (err) {
+      console.error('Unexpected error saving to Supabase:', err);
+      const newEntries = [...entries, { ...entry, id: Date.now().toString() }];
+      setEntries(newEntries);
+      localStorage.setItem('fieldTrackerEntries', JSON.stringify(newEntries));
+    }
   };
 
   const deleteEntry = (id) => {
