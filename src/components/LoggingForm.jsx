@@ -94,7 +94,6 @@ export default function LoggingForm() {
   const [date, setDate] = useState(today);
   const [taskType, setTaskType] = useState('Bore');
   const [boreNumber, setBoreNumber] = useState('1');
-  const [handHoleNumber, setHandHoleNumber] = useState('0');
   const [dropNumber, setDropNumber] = useState('');
   const [fiberCount, setFiberCount] = useState(FIBER_COUNTS[0]);
   const [rdtSection, setRdtSection] = useState('RDT1');
@@ -111,21 +110,11 @@ export default function LoggingForm() {
     return Array.from({ length: 20 }, (_, i) => `${i + 1}`);
   }, [rdtSection]);
 
-  const handHoleOptions = useMemo(() => {
-    if (rdtSection === 'Toll N' || rdtSection === 'Toll S') {
-      return Array.from({ length: 301 }, (_, i) => `${i}`);
-    }
-    return Array.from({ length: 31 }, (_, i) => `${i}`);
-  }, [rdtSection]);
-
   useEffect(() => {
-    if (taskType === 'Hand Hole' && !handHoleOptions.includes(String(handHoleNumber))) {
-      setHandHoleNumber('0');
-    }
     if (taskType !== 'Drop' && !locationOptions.includes(String(location))) {
       setLocation(locationOptions[0] || '1');
     }
-  }, [rdtSection, handHoleOptions, locationOptions, taskType]);
+  }, [rdtSection, locationOptions, taskType]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -141,7 +130,7 @@ export default function LoggingForm() {
       taskType,
       boreNumber: taskType === 'Bore' ? boreNumber : null,
       fiberCount: taskType === 'Fiber' ? fiberCount : null,
-      handHoleNumber: taskType === 'Hand Hole' ? handHoleNumber : null,
+      handHoleNumber: null,
       dropNumber: taskType === 'Drop' ? dropNumber : null,
       rdtSection: taskType === 'Drop' ? '-' : rdtSection,
       route: taskType === 'Drop' || rdtSection === 'Toll N' || rdtSection === 'Toll S' ? '-' : route,
@@ -278,18 +267,6 @@ export default function LoggingForm() {
                     value={fiberCount} 
                     onChange={setFiberCount} 
                     options={FIBER_COUNTS} 
-                    required 
-                  />
-                </div>
-              ) : taskType === 'Hand Hole' ? (
-                <div className="animate-in fade-in slide-in-from-top-2">
-                  <Combobox 
-                    id="handHoleNumber" 
-                    label="Location" 
-                    value={handHoleNumber} 
-                    onChange={setHandHoleNumber} 
-                    options={handHoleOptions} 
-                    placeholder="e.g. 12" 
                     required 
                   />
                 </div>
