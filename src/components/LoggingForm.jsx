@@ -107,7 +107,7 @@ export default function LoggingForm() {
     if (rdtSection === 'Toll N' || rdtSection === 'Toll S') {
       return Array.from({ length: 301 }, (_, i) => `${i}`);
     }
-    return Array.from({ length: 20 }, (_, i) => `${i + 1}`);
+    return Array.from({ length: 50 }, (_, i) => `${i + 1}`);
   }, [rdtSection]);
 
   useEffect(() => {
