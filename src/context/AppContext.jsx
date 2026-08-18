@@ -93,16 +93,34 @@ export const AppProvider = ({ children }) => {
 
   const addEntry = async (entry) => {
     try {
+      // Consolidate conditional fields into a single spec_number string
+      const specNumber = entry.taskType === 'Bore' ? entry.boreNumber :
+                         entry.taskType === 'Fiber' ? entry.fiberCount :
+                         entry.taskType === 'Hand Holes' ? entry.handHoleNumber :
+                         entry.taskType === 'Drop' ? entry.dropNumber : null;
+
+      const supabasePayload = {
+        service_date: entry.date,
+        section: entry.rdtSection,
+        route: entry.route,
+        location: entry.location,
+        task_type: entry.taskType,
+        spec_number: specNumber,
+        footage: entry.footage,
+        inspector_name: entry.inspector
+      };
+
       const { data, error } = await supabase
-        .from('entries')
-        .insert([entry])
+        .from('production_logs')
+        .insert([supabasePayload])
         .select();
 
       if (error) {
         console.error('Error saving to Supabase:', error);
       }
 
-      const newEntry = data && data.length > 0 ? data[0] : { ...entry, id: Date.now().toString() };
+      // Keep local state mapped to the original entry shape for internal components
+      const newEntry = { ...entry, id: data && data.length > 0 ? data[0].id : Date.now().toString() };
       const newEntries = [...entries, newEntry];
       setEntries(newEntries);
       localStorage.setItem('fieldTrackerEntries', JSON.stringify(newEntries));
