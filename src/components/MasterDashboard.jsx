@@ -10,7 +10,7 @@ export default function MasterDashboard() {
 
   // Group by Date -> Inspector -> RDTSection -> Route -> Location -> TaskType -> BoreNumber -> FiberCount -> Total Footage
   const aggregatedData = useMemo(() => {
-    let filtered = entries.filter(e => !(e.taskType === 'Hand Holes' && e.handHoleStatus === 'Not Complete') && e.taskType !== 'DROP');
+    let filtered = entries.filter(e => !(e.taskType === 'Hand Holes' && e.handHoleStatus === 'Not Complete') && e.taskType !== 'Drop');
     if (filterDate) {
       filtered = filtered.filter(e => e.date === filterDate);
     }
@@ -63,7 +63,7 @@ export default function MasterDashboard() {
   }, [entries, filterDate, filterInspector]);
 
   // Overall totals (excluding incomplete Hand Holes and DROPs)
-  const validEntries = useMemo(() => entries.filter(e => !(e.taskType === 'Hand Holes' && e.handHoleStatus === 'Not Complete') && e.taskType !== 'DROP'), [entries]);
+  const validEntries = useMemo(() => entries.filter(e => !(e.taskType === 'Hand Holes' && e.handHoleStatus === 'Not Complete') && e.taskType !== 'Drop'), [entries]);
   const totalBore = useMemo(() => validEntries.filter(e => e.taskType === 'Bore').reduce((sum, e) => sum + e.footage, 0), [validEntries]);
   const totalPlow = useMemo(() => validEntries.filter(e => e.taskType === 'Plow Duct').reduce((sum, e) => sum + e.footage, 0), [validEntries]);
   const totalFiber = useMemo(() => validEntries.filter(e => e.taskType === 'Fiber').reduce((sum, e) => sum + e.footage, 0), [validEntries]);
@@ -193,7 +193,7 @@ export default function MasterDashboard() {
                       <span className={`px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full 
                         ${row.taskType === 'Bore' ? 'bg-orange-100 text-orange-800 border border-orange-200' : 
                           row.taskType === 'Fiber' ? 'bg-indigo-100 text-indigo-800 border border-indigo-200' : 
-                          row.taskType === 'DROP' ? 'bg-pink-100 text-pink-800 border border-pink-200' :
+                          row.taskType === 'Drop' ? 'bg-pink-100 text-pink-800 border border-pink-200' :
                           'bg-green-100 text-green-800 border border-green-200'}`}>
                         {row.taskType} 
                         {row.boreNumber ? ` (#${row.boreNumber})` : ''}
@@ -203,7 +203,7 @@ export default function MasterDashboard() {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-bold text-slate-900">
-                      {row.totalFootage.toLocaleString()} <span className="text-slate-500 font-medium">{row.taskType === 'Hand Holes' || row.taskType === 'DROP' ? 'qty' : 'ft'}</span>
+                      {row.totalFootage.toLocaleString()} <span className="text-slate-500 font-medium">{row.taskType === 'Hand Holes' || row.taskType === 'Drop' ? 'qty' : 'ft'}</span>
                     </td>
                   </tr>
                 ))}

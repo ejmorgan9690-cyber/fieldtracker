@@ -9,7 +9,7 @@ export default function MasterDrops() {
 
   // Group by Date -> Inspector -> DropNumber
   const aggregatedData = useMemo(() => {
-    let filtered = entries.filter(e => e.taskType === 'DROP');
+    let filtered = entries.filter(e => e.taskType === 'Drop');
     if (filterDate) {
       filtered = filtered.filter(e => e.date === filterDate);
     }
@@ -26,7 +26,7 @@ export default function MasterDrops() {
         grouped[key] = {
           date,
           inspector,
-          taskType: 'DROP',
+          taskType: 'Drop',
           dropNumber: dropNumber || '',
           totalFootage: 0,
         };
@@ -41,10 +41,10 @@ export default function MasterDrops() {
     });
   }, [entries, filterDate, filterInspector]);
 
-  const totalDrops = useMemo(() => entries.filter(e => e.taskType === 'DROP').reduce((sum, e) => sum + e.footage, 0), [entries]);
+  const totalDrops = useMemo(() => entries.filter(e => e.taskType === 'Drop').reduce((sum, e) => sum + e.footage, 0), [entries]);
 
   const uniqueInspectors = useMemo(() => {
-    const inspectors = new Set(entries.filter(e => e.taskType === 'DROP').map(e => e.inspector));
+    const inspectors = new Set(entries.filter(e => e.taskType === 'Drop').map(e => e.inspector));
     return Array.from(inspectors).filter(Boolean).sort();
   }, [entries]);
 

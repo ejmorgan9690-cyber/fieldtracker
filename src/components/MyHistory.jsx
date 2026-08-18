@@ -96,7 +96,7 @@ export default function MyHistory() {
                         <span className={`px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full 
                           ${row.taskType === 'Bore' ? 'bg-orange-100 text-orange-800 border border-orange-200' : 
                             row.taskType === 'Fiber' ? 'bg-indigo-100 text-indigo-800 border border-indigo-200' : 
-                            row.taskType === 'DROP' ? 'bg-pink-100 text-pink-800 border border-pink-200' :
+                            row.taskType === 'Drop' ? 'bg-pink-100 text-pink-800 border border-pink-200' :
                             'bg-green-100 text-green-800 border border-green-200'}`}>
                           {row.taskType} 
                           {row.boreNumber ? ` (#${row.boreNumber})` : ''}
@@ -106,7 +106,7 @@ export default function MyHistory() {
                         </span>
                       </td>
                       <td className="px-8 py-4 whitespace-nowrap text-sm text-right font-bold text-slate-900">
-                        {row.footage.toLocaleString()} <span className="text-slate-500 font-medium">{row.taskType === 'Hand Holes' || row.taskType === 'DROP' ? 'qty' : 'ft'}</span>
+                        {row.footage.toLocaleString()} <span className="text-slate-500 font-medium">{row.taskType === 'Hand Holes' || row.taskType === 'Drop' ? 'qty' : 'ft'}</span>
                       </td>
                       <td className="px-8 py-4 whitespace-nowrap text-center">
                         <button

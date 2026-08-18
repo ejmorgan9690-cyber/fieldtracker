@@ -9,7 +9,7 @@ export default function MasterDailies() {
   const [expandedId, setExpandedId] = useState(null);
 
   const filteredDailies = useMemo(() => {
-    let result = dailies.filter(d => d.workType !== 'DROP');
+    let result = dailies.filter(d => d.workType !== 'Drop');
     if (filterDate) {
       result = result.filter(d => d.date === filterDate);
     }
