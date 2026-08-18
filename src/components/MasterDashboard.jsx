@@ -199,7 +199,7 @@ export default function MasterDashboard() {
                         {row.boreNumber ? ` (#${row.boreNumber})` : ''}
                         {row.fiberCount ? ` (${row.fiberCount})` : ''}
                         {row.handHoleNumber !== '' && row.handHoleNumber != null ? ` (#${row.handHoleNumber})` : ''}
-                        {row.dropNumber ? ` (#${row.dropNumber})` : ''}
+                        {row.dropNumber ? ` (${row.dropNumber})` : ''}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-bold text-slate-900">

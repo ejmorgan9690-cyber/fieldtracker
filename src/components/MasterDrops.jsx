@@ -120,7 +120,7 @@ export default function MasterDrops() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
                       <span className="px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full bg-pink-100 text-pink-800 border border-pink-200">
                         {row.taskType} 
-                        {row.dropNumber ? ` (#${row.dropNumber})` : ''}
+                        {row.dropNumber ? ` (${row.dropNumber})` : ''}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-bold text-slate-900">
