@@ -104,7 +104,10 @@ export default function LoggingForm() {
   const [gpsCoordinates, setGpsCoordinates] = useState('');
   const [dropNumber, setDropNumber] = useState('');
   const [fiberCount, setFiberCount] = useState(FIBER_COUNTS[0]);
-  const [town, setTown] = useState('Shidler');
+  
+  // Persist town across app reloads
+  const [town, setTown] = useState(() => localStorage.getItem('fieldTrackerTown') || 'Shidler');
+  
   const [rdtSection, setRdtSection] = useState('RDT1');
   const [route, setRoute] = useState('Route 1');
   const [location, setLocation] = useState('1');
@@ -123,6 +126,11 @@ export default function LoggingForm() {
   const fileInputRef = useRef(null);
   
   const [successMsg, setSuccessMsg] = useState(false);
+
+  // Sync town changes to local storage
+  useEffect(() => {
+    localStorage.setItem('fieldTrackerTown', town);
+  }, [town]);
 
   const locationOptions = useMemo(() => {
     if (rdtSection === 'Toll N' || rdtSection === 'Toll S') {
