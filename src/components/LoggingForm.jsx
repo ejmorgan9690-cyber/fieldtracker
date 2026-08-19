@@ -298,7 +298,7 @@ export default function LoggingForm() {
                 <div className="animate-in fade-in slide-in-from-top-2 space-y-4">
                   <Combobox 
                     id="unitCode" 
-                    label="Unit Code (Bore)" 
+                    label="Units (Bore)" 
                     value={unitCode} 
                     onChange={setUnitCode} 
                     options={['BM61D (Dirt)', 'BM61R (Rock)'].map(o => o.split(' ')[0])} 
@@ -339,11 +339,11 @@ export default function LoggingForm() {
                     </div>
                   )}
                 </div>
-              ) : taskType === 'Plow' || taskType === 'Trench' ? (
+              ) : taskType === 'Plow Duct' || taskType === 'Trench' ? (
                 <div className="animate-in fade-in slide-in-from-top-2">
                   <Combobox 
                     id="unitCode" 
-                    label={`Unit Code (${taskType})`} 
+                    label={`Units (${taskType})`} 
                     value={unitCode} 
                     onChange={setUnitCode} 
                     options={['BFOV (1.25)(1)', 'BFOV (1.25)(2)', 'BFOV (1.25)(3)', 'BFOV (1.25)(4)']} 
@@ -354,7 +354,7 @@ export default function LoggingForm() {
                 <div className="animate-in fade-in slide-in-from-top-2 space-y-4">
                   <Combobox 
                     id="unitCode" 
-                    label="Unit Code (Fiber)" 
+                    label="Units (Fiber)" 
                     value={unitCode} 
                     onChange={setUnitCode} 
                     options={['BFO 24I', 'BFO 48I', 'BFO 72I', 'BFO 96I']} 
@@ -397,7 +397,7 @@ export default function LoggingForm() {
                 <div className="animate-in fade-in slide-in-from-top-2 space-y-4">
                   <Combobox 
                     id="unitCode" 
-                    label="Unit Code (Hand Hole Size)" 
+                    label="Units (Hand Hole Size)" 
                     value={unitCode} 
                     onChange={setUnitCode} 
                     options={['BHF (24x36x30)', 'BHF (30x48x36)']} 
