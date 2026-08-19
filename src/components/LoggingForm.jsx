@@ -4,7 +4,7 @@ import { Save, CheckCircle, FileSignature, Calendar, User } from 'lucide-react';
 
 const RDT_SECTIONS = [...Array.from({ length: 10 }, (_, i) => `RDT${i + 1}`), 'Toll N', 'Toll S'];
 const ROUTES = Array.from({ length: 20 }, (_, i) => `Route ${i + 1}`);
-const TASK_TYPES = ['Bore', 'Plow Duct', 'Fiber', 'Hand Hole', 'Drop'];
+const TASK_TYPES = ['Bore', 'Plow Duct', 'Fiber', 'Fiber Loop', 'Hand Hole', 'Drop'];
 const FIBER_COUNTS = ['4 count', '12 count', '24 count', '48 count', '96 count', '144 count', '288 count'];
 const BORE_NUMBERS = Array.from({ length: 30 }, (_, i) => `${i + 1}`);
 
@@ -357,18 +357,17 @@ export default function LoggingForm() {
                     options={['BFO 24I', 'BFO 48I', 'BFO 72I', 'BFO 96I']} 
                     required 
                   />
-                  <div className="flex items-center pt-2">
-                    <input
-                      id="isFiberLoop"
-                      type="checkbox"
-                      checked={isFiberLoop}
-                      onChange={(e) => setIsFiberLoop(e.target.checked)}
-                      className="h-5 w-5 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"
-                    />
-                    <label htmlFor="isFiberLoop" className="ml-2 text-sm font-bold text-slate-700">
-                      Storage Loop in Handhole (adds LOOP to Unit Code)
-                    </label>
-                  </div>
+                </div>
+              ) : taskType === 'Fiber Loop' ? (
+                <div className="animate-in fade-in slide-in-from-top-2 space-y-4">
+                  <Combobox 
+                    id="unitCode" 
+                    label="Unit Code (Fiber Loop)" 
+                    value={unitCode} 
+                    onChange={setUnitCode} 
+                    options={['BFO 24I LOOP', 'BFO 48I LOOP', 'BFO 72I LOOP', 'BFO 96I LOOP']} 
+                    required 
+                  />
                 </div>
               ) : taskType === 'Hand Hole' ? (
                 <div className="animate-in fade-in slide-in-from-top-2 space-y-4">
@@ -432,7 +431,9 @@ export default function LoggingForm() {
               <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-6 border-b border-slate-100 pb-3">3. Production Output</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div>
-                  <label htmlFor="footage" className="block text-sm font-bold text-slate-700 mb-2">Quantity / Footage Installed</label>
+                  <label htmlFor="footage" className="block text-sm font-bold text-slate-700 mb-2">
+                    {taskType === 'Fiber Loop' ? 'Quantity of Loops' : taskType === 'Hand Hole' || taskType === 'Drop' ? 'Quantity' : 'Total Footage'}
+                  </label>
                   <div className="relative rounded-lg shadow-sm">
                     <input
                       type="number"
@@ -440,12 +441,14 @@ export default function LoggingForm() {
                       min="1"
                       value={footage}
                       onChange={(e) => setFootage(e.target.value)}
-                      className="block w-full px-4 py-3 rounded-lg border border-slate-300 bg-white text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 shadow-sm transition-all font-medium"
-                      placeholder="e.g. 1500"
+                      className="block w-full px-4 py-3 rounded-lg border border-slate-300 bg-white text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 shadow-sm transition-all font-medium pr-12"
+                      placeholder={taskType === 'Fiber Loop' ? 'e.g. 2' : 'e.g. 1500'}
                       required={taskType !== 'Drop' && taskType !== 'Hand Hole'}
                     />
                     <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none">
-                      <span className="text-slate-400 font-medium">ft / qty</span>
+                      <span className="text-slate-400 font-bold">
+                        {taskType === 'Fiber Loop' || taskType === 'Hand Hole' || taskType === 'Drop' ? 'qty' : 'ft'}
+                      </span>
                     </div>
                   </div>
                 </div>

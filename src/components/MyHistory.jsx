@@ -123,7 +123,7 @@ export default function MyHistory() {
                           )}
                         </td>
                         <td className="px-8 py-4 whitespace-nowrap text-sm text-right font-bold text-slate-900">
-                          {row.footage.toLocaleString()} <span className="text-slate-500 font-medium">{row.taskType === 'Hand Hole' || row.taskType === 'Drop' ? 'qty' : 'ft'}</span>
+                          {row.footage.toLocaleString()} <span className="text-slate-500 font-medium">{row.taskType === 'Hand Hole' || row.taskType === 'Drop' || row.taskType === 'Fiber Loop' ? 'qty' : 'ft'}</span>
                       </td>
                       <td className="px-8 py-4 whitespace-nowrap text-center">
                         <button
