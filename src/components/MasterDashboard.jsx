@@ -29,8 +29,8 @@ export default function MasterDashboard() {
     const grouped = {};
 
     filtered.forEach(entry => {
-      const { date, inspector, rdtSection, route, location, taskType, boreNumber, fiberCount, handHoleNumber, footage } = entry;
-      const key = `${date}|${inspector}|${rdtSection || ''}|${route}|${location}|${taskType}|${boreNumber || ''}|${fiberCount || ''}|${handHoleNumber || ''}`;
+      const { date, inspector, rdtSection, route, location, taskType, boreNumber, fiberCount, handHoleNumber, footage, isAddedBore, gpsCoordinates } = entry;
+      const key = `${date}|${inspector}|${rdtSection || ''}|${route}|${location}|${taskType}|${boreNumber || ''}|${fiberCount || ''}|${handHoleNumber || ''}|${isAddedBore || ''}|${gpsCoordinates || ''}`;
       if (!grouped[key]) {
         grouped[key] = {
           date,
@@ -42,6 +42,8 @@ export default function MasterDashboard() {
           boreNumber: boreNumber || '',
           fiberCount: fiberCount || '',
           handHoleNumber: handHoleNumber || '',
+          isAddedBore: isAddedBore || false,
+          gpsCoordinates: gpsCoordinates || null,
           totalFootage: 0,
           entriesCount: 0
         };
@@ -190,16 +192,23 @@ export default function MasterDashboard() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">{row.route}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">{row.location}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
-                      <span className={`px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full 
+                      <span className={`px-3 py-1 inline-flex flex-col text-xs leading-5 font-bold rounded-full 
                         ${row.taskType === 'Bore' ? 'bg-orange-100 text-orange-800 border border-orange-200' : 
                           row.taskType === 'Fiber' ? 'bg-indigo-100 text-indigo-800 border border-indigo-200' : 
                           row.taskType === 'Drop' ? 'bg-pink-100 text-pink-800 border border-pink-200' :
                           'bg-green-100 text-green-800 border border-green-200'}`}>
-                        {row.taskType} 
-                        {row.boreNumber ? ` (#${row.boreNumber})` : ''}
-                        {row.fiberCount ? ` (${row.fiberCount})` : ''}
-                        {row.handHoleNumber !== '' && row.handHoleNumber != null ? ` (#${row.handHoleNumber})` : ''}
-                        {row.dropNumber ? ` (${row.dropNumber})` : ''}
+                        <span>
+                          {row.taskType}
+                          {row.boreNumber && !row.isAddedBore ? ` (#${row.boreNumber})` : ''}
+                          {row.isAddedBore ? ` (Added Bore)` : ''}
+                          {row.fiberCount ? ` (${row.fiberCount})` : ''}
+                          {row.handHoleNumber !== '' && row.handHoleNumber != null ? ` (#${row.handHoleNumber})` : ''}
+                        </span>
+                        {row.gpsCoordinates && (
+                          <span className="mt-1 text-[10px] opacity-75 font-medium">
+                            GPS: {row.gpsCoordinates}
+                          </span>
+                        )}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-bold text-slate-900">

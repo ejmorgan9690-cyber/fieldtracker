@@ -42,6 +42,8 @@ export const AppProvider = ({ children }) => {
             fiberCount: row.task_type === 'Fiber' ? row.spec_number : null,
             handHoleNumber: row.task_type === 'Hand Hole' ? row.spec_number : null,
             dropNumber: row.task_type === 'Drop' ? row.spec_number : null,
+            isAddedBore: row.is_added_bore || false,
+            gpsCoordinates: row.gps_coordinates || null,
           }));
           setEntries(mappedEntries);
           localStorage.setItem('fieldTrackerEntries', JSON.stringify(mappedEntries));
@@ -168,7 +170,9 @@ export const AppProvider = ({ children }) => {
         task_type: entry.taskType,
         spec_number: specNumber,
         footage: entry.footage,
-        inspector_name: entry.inspector
+        inspector_name: entry.inspector,
+        is_added_bore: entry.isAddedBore || false,
+        gps_coordinates: entry.gpsCoordinates || null
       };
 
       const { data, error } = await supabase

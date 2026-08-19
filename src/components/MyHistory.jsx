@@ -99,11 +99,17 @@ export default function MyHistory() {
                             row.taskType === 'Drop' ? 'bg-pink-100 text-pink-800 border border-pink-200' :
                             'bg-green-100 text-green-800 border border-green-200'}`}>
                           {row.taskType} 
-                          {row.boreNumber ? ` (#${row.boreNumber})` : ''}
+                          {row.boreNumber && !row.isAddedBore ? ` (#${row.boreNumber})` : ''}
+                          {row.isAddedBore ? ` (Added Bore)` : ''}
                           {row.fiberCount ? ` (${row.fiberCount})` : ''}
                           {row.handHoleNumber !== '' && row.handHoleNumber != null ? ` (#${row.handHoleNumber})` : ''}
                           {row.dropNumber ? ` (${row.dropNumber})` : ''}
                         </span>
+                        {row.gpsCoordinates && (
+                          <div className="mt-1 text-xs text-slate-500 font-medium">
+                            GPS: {row.gpsCoordinates}
+                          </div>
+                        )}
                       </td>
                       <td className="px-8 py-4 whitespace-nowrap text-sm text-right font-bold text-slate-900">
                         {row.footage.toLocaleString()} <span className="text-slate-500 font-medium">{row.taskType === 'Hand Hole' || row.taskType === 'Drop' ? 'qty' : 'ft'}</span>

@@ -94,6 +94,8 @@ export default function LoggingForm() {
   const [date, setDate] = useState(today);
   const [taskType, setTaskType] = useState('Bore');
   const [boreNumber, setBoreNumber] = useState('1');
+  const [isAddedBore, setIsAddedBore] = useState(false);
+  const [gpsCoordinates, setGpsCoordinates] = useState('');
   const [dropNumber, setDropNumber] = useState('');
   const [fiberCount, setFiberCount] = useState(FIBER_COUNTS[0]);
   const [rdtSection, setRdtSection] = useState('RDT1');
@@ -136,6 +138,8 @@ export default function LoggingForm() {
       route: taskType === 'Drop' || rdtSection === 'Toll N' || rdtSection === 'Toll S' ? '-' : route,
       location: taskType === 'Drop' ? '-' : location,
       footage: taskType === 'Drop' || taskType === 'Hand Hole' ? 1 : Number(footage),
+      isAddedBore: taskType === 'Bore' ? isAddedBore : false,
+      gpsCoordinates: taskType === 'Bore' && isAddedBore ? gpsCoordinates : null,
     });
 
     if (taskType !== 'Drop' && taskType !== 'Hand Hole') setFootage('');
@@ -249,15 +253,41 @@ export default function LoggingForm() {
               />
 
               {taskType === 'Bore' ? (
-                <div className="animate-in fade-in slide-in-from-top-2">
+                <div className="animate-in fade-in slide-in-from-top-2 space-y-4">
                   <Combobox 
                     id="boreNumber" 
                     label="Bore Number" 
                     value={boreNumber} 
                     onChange={setBoreNumber} 
                     options={BORE_NUMBERS} 
-                    required 
+                    required={!isAddedBore} 
                   />
+                  <div className="flex items-center pt-2">
+                    <input
+                      id="isAddedBore"
+                      type="checkbox"
+                      checked={isAddedBore}
+                      onChange={(e) => setIsAddedBore(e.target.checked)}
+                      className="h-5 w-5 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"
+                    />
+                    <label htmlFor="isAddedBore" className="ml-2 text-sm font-bold text-slate-700">
+                      Added Bore (Not on Prints)
+                    </label>
+                  </div>
+                  {isAddedBore && (
+                    <div className="animate-in fade-in slide-in-from-top-2">
+                      <label htmlFor="gpsCoordinates" className="block text-sm font-bold text-slate-700 mb-2">GPS Coordinates (Start)</label>
+                      <input
+                        type="text"
+                        id="gpsCoordinates"
+                        value={gpsCoordinates}
+                        onChange={(e) => setGpsCoordinates(e.target.value)}
+                        className="block w-full px-4 py-3 rounded-lg border border-slate-300 bg-white text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 shadow-sm transition-all font-medium"
+                        placeholder="e.g. 35.123, -90.456"
+                        required={isAddedBore}
+                      />
+                    </div>
+                  )}
                 </div>
               ) : taskType === 'Fiber' ? (
                 <div className="animate-in fade-in slide-in-from-top-2">
