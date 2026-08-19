@@ -25,11 +25,11 @@ export const AppProvider = ({ children }) => {
   useEffect(() => {
     const fetchEntries = async () => {
       try {
-        const { data, error } = await supabase.from('production_logs').select('*');
-        if (error) {
-          console.error('Error fetching from Supabase:', error);
-        } else if (data) {
-          const mappedEntries = data.map(row => ({
+        const { data: logsData, error: logsError } = await supabase.from('production_logs').select('*');
+        if (logsError) {
+          console.error('Error fetching logs from Supabase:', logsError);
+        } else if (logsData) {
+          const mappedEntries = logsData.map(row => ({
             id: row.id || Date.now().toString() + Math.random(),
             inspector: row.inspector_name,
             date: row.service_date,
@@ -44,11 +44,31 @@ export const AppProvider = ({ children }) => {
             dropNumber: row.task_type === 'Drop' ? row.spec_number : null,
             isAddedBore: row.is_added_bore || false,
             gpsCoordinates: row.gps_coordinates || null,
+            psNumber: row.ps_number || '',
+            status: row.status || 'Pending'
           }));
           setEntries(mappedEntries);
           localStorage.setItem('fieldTrackerEntries', JSON.stringify(mappedEntries));
-          return;
         }
+
+        const { data: redlinesData, error: redlinesError } = await supabase.from('redlines').select('*');
+        if (redlinesError) {
+          console.error('Error fetching redlines from Supabase:', redlinesError);
+        } else if (redlinesData) {
+          const mappedRedlines = redlinesData.map(row => ({
+            id: row.id,
+            inspector: row.inspector_name,
+            date: row.service_date,
+            rdtSection: row.section,
+            route: row.route,
+            location: row.location,
+            psNumber: row.ps_number || '',
+            imageData: row.image_data
+          }));
+          setRedlines(mappedRedlines);
+          localStorage.setItem('fieldTrackerRedlines', JSON.stringify(mappedRedlines));
+        }
+
       } catch (err) {
         console.error('Unexpected error fetching from Supabase:', err);
       }
@@ -180,7 +200,9 @@ export const AppProvider = ({ children }) => {
         footage: entry.footage,
         inspector_name: entry.inspector,
         is_added_bore: entry.isAddedBore || false,
-        gps_coordinates: entry.gpsCoordinates || null
+        gps_coordinates: entry.gpsCoordinates || null,
+        ps_number: entry.psNumber,
+        status: 'Pending'
       };
 
       const { data, error } = await supabase
@@ -192,20 +214,35 @@ export const AppProvider = ({ children }) => {
         console.error('Error saving to Supabase:', error);
       }
 
-      // Keep local state mapped to the original entry shape for internal components
-      const newEntry = { ...entry, id: data && data.length > 0 ? data[0].id : Date.now().toString() };
+      const newEntry = { ...entry, id: data && data.length > 0 ? data[0].id : Date.now().toString(), status: 'Pending' };
       const newEntries = [...entries, newEntry];
       setEntries(newEntries);
       localStorage.setItem('fieldTrackerEntries', JSON.stringify(newEntries));
     } catch (err) {
       console.error('Unexpected error saving to Supabase:', err);
-      const newEntries = [...entries, { ...entry, id: Date.now().toString() }];
+      const newEntries = [...entries, { ...entry, id: Date.now().toString(), status: 'Pending' }];
       setEntries(newEntries);
       localStorage.setItem('fieldTrackerEntries', JSON.stringify(newEntries));
     }
   };
 
-  const deleteEntry = (id) => {
+  const verifyEntry = async (id) => {
+    try {
+      const { error } = await supabase.from('production_logs').update({ status: 'Accepted' }).eq('id', id);
+      if (error) console.error("Error verifying entry:", error);
+      
+      const newEntries = entries.map(e => e.id === id ? { ...e, status: 'Accepted' } : e);
+      setEntries(newEntries);
+      localStorage.setItem('fieldTrackerEntries', JSON.stringify(newEntries));
+    } catch (err) {
+      console.error("Error in verifyEntry:", err);
+    }
+  };
+
+  const deleteEntry = async (id) => {
+    try {
+      await supabase.from('production_logs').delete().eq('id', id);
+    } catch(e) {}
     const newEntries = entries.filter(e => e.id !== id);
     setEntries(newEntries);
     localStorage.setItem('fieldTrackerEntries', JSON.stringify(newEntries));
@@ -235,10 +272,30 @@ export const AppProvider = ({ children }) => {
     localStorage.setItem('fieldTrackerGigs', JSON.stringify(newGigs));
   };
 
-  const addRedline = (redline) => {
-    const newRedlines = [...redlines, { ...redline, id: Date.now().toString() }];
-    setRedlines(newRedlines);
-    localStorage.setItem('fieldTrackerRedlines', JSON.stringify(newRedlines));
+  const addRedline = async (redline) => {
+    try {
+      const supabasePayload = {
+        inspector_name: redline.inspector,
+        service_date: redline.date,
+        section: redline.rdtSection,
+        route: redline.route,
+        location: redline.location,
+        ps_number: redline.psNumber,
+        image_data: redline.imageData
+      };
+
+      const { data, error } = await supabase.from('redlines').insert([supabasePayload]).select();
+      if (error) console.error("Error saving redline to Supabase:", error);
+
+      const newRedlines = [...redlines, { ...redline, id: data && data.length > 0 ? data[0].id : Date.now().toString() }];
+      setRedlines(newRedlines);
+      localStorage.setItem('fieldTrackerRedlines', JSON.stringify(newRedlines));
+    } catch (err) {
+      console.error("Error in addRedline:", err);
+      const newRedlines = [...redlines, { ...redline, id: Date.now().toString() }];
+      setRedlines(newRedlines);
+      localStorage.setItem('fieldTrackerRedlines', JSON.stringify(newRedlines));
+    }
   };
 
   const deleteRedline = (id) => {
@@ -263,7 +320,7 @@ export const AppProvider = ({ children }) => {
   return (
     <AppContext.Provider value={{ 
       authUser, login, logout, register,
-      entries, addEntry, deleteEntry, 
+      entries, addEntry, deleteEntry, verifyEntry,
       dailies, addDaily, deleteDaily,
       gigs, addGig, deleteGig,
       redlines, addRedline, deleteRedline,

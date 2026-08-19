@@ -10,6 +10,7 @@ export default function RedlinesForm() {
   const [rdtSection, setRdtSection] = useState('RDT1');
   const [route, setRoute] = useState('Route 1');
   const [location, setLocation] = useState('1');
+  const [psNumber, setPsNumber] = useState('');
   
   const [imagePreview, setImagePreview] = useState(null);
   const [imageData, setImageData] = useState(null);
@@ -42,6 +43,7 @@ export default function RedlinesForm() {
       rdtSection,
       route: rdtSection === 'Toll N' || rdtSection === 'Toll S' ? '-' : route,
       location,
+      psNumber,
       imageData
     });
     
@@ -71,7 +73,7 @@ export default function RedlinesForm() {
         {/* Hierarchy Selection */}
         <div className="bg-slate-50 p-6 rounded-xl border border-slate-100">
           <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 border-b border-slate-200 pb-3">Location Details</h3>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-2">Date</label>
               <input type="date" value={date} onChange={(e) => setDate(e.target.value)} required className="block w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-purple-500 focus:border-purple-500" />
@@ -126,6 +128,17 @@ export default function RedlinesForm() {
                   : Array.from({ length: 20 }, (_, i) => `${i + 1}`)
                 ).map(l => <option key={l} value={l} />)}
               </datalist>
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-2">PS Number</label>
+              <input
+                type="text"
+                value={psNumber}
+                onChange={(e) => setPsNumber(e.target.value)}
+                required
+                className="block w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                placeholder="e.g. PS-101"
+              />
             </div>
           </div>
         </div>

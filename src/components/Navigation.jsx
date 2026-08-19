@@ -120,6 +120,17 @@ export default function Navigation() {
                 {activeTab !== 'master_drops' && (
                   <div className="flex items-center space-x-2 bg-slate-50 p-1.5 rounded-xl border border-slate-200 overflow-x-auto">
                     <button
+                      onClick={() => setActiveTab('pending_review')}
+                      className={`flex-1 sm:flex-none flex items-center px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-all duration-200 ${
+                        activeTab === 'pending_review'
+                          ? 'bg-indigo-600 text-white shadow-md ring-2 ring-indigo-600 ring-offset-2'
+                          : 'text-slate-600 hover:bg-slate-200 hover:text-slate-900'
+                      }`}
+                    >
+                      <ClipboardList className="w-4 h-4 mr-2" />
+                      Pending Review
+                    </button>
+                    <button
                       onClick={() => setActiveTab('dashboard')}
                       className={`flex-1 sm:flex-none flex items-center px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-all duration-200 ${
                         activeTab === 'dashboard'

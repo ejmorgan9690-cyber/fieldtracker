@@ -9,7 +9,7 @@ export default function MasterDrops() {
 
   // Group by Date -> Inspector -> DropNumber
   const aggregatedData = useMemo(() => {
-    let filtered = entries.filter(e => e.taskType === 'Drop');
+    let filtered = entries.filter(e => e.taskType === 'Drop' && e.status === 'Accepted');
     if (filterDate) {
       filtered = filtered.filter(e => e.date === filterDate);
     }

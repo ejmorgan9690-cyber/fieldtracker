@@ -93,6 +93,7 @@ export default function LoggingForm() {
 
   const [date, setDate] = useState(today);
   const [taskType, setTaskType] = useState('Bore');
+  const [psNumber, setPsNumber] = useState('');
   const [boreNumber, setBoreNumber] = useState('1');
   const [isAddedBore, setIsAddedBore] = useState(false);
   const [gpsCoordinates, setGpsCoordinates] = useState('');
@@ -140,6 +141,7 @@ export default function LoggingForm() {
       footage: taskType === 'Drop' || taskType === 'Hand Hole' ? 1 : Number(footage),
       isAddedBore: taskType === 'Bore' ? isAddedBore : false,
       gpsCoordinates: taskType === 'Bore' && isAddedBore ? gpsCoordinates : null,
+      psNumber: psNumber
     });
 
     if (taskType !== 'Drop' && taskType !== 'Hand Hole') setFootage('');
@@ -251,6 +253,19 @@ export default function LoggingForm() {
                 options={TASK_TYPES} 
                 required 
               />
+              
+              <div>
+                <label htmlFor="psNumber" className="block text-sm font-bold text-slate-700 mb-2">PS (Pay Sheet) Number</label>
+                <input
+                  type="text"
+                  id="psNumber"
+                  value={psNumber}
+                  onChange={(e) => setPsNumber(e.target.value)}
+                  className="block w-full px-4 py-3 rounded-lg border border-slate-300 bg-white text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 shadow-sm transition-all font-medium"
+                  placeholder="e.g. PS-101"
+                  required
+                />
+              </div>
 
               {taskType === 'Bore' ? (
                 <div className="animate-in fade-in slide-in-from-top-2 space-y-4">

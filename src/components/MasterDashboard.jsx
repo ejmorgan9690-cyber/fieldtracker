@@ -10,7 +10,7 @@ export default function MasterDashboard() {
 
   // Group by Date -> Inspector -> RDTSection -> Route -> Location -> TaskType -> BoreNumber -> FiberCount -> Total Footage
   const aggregatedData = useMemo(() => {
-    let filtered = entries.filter(e => !(e.taskType === 'Hand Hole' && e.handHoleStatus === 'Not Complete') && e.taskType !== 'Drop');
+    let filtered = entries.filter(e => !(e.taskType === 'Hand Hole' && e.handHoleStatus === 'Not Complete') && e.taskType !== 'Drop' && e.status === 'Accepted');
     if (filterDate) {
       filtered = filtered.filter(e => e.date === filterDate);
     }
