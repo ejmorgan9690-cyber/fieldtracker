@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { MapContainer, TileLayer, GeoJSON, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, GeoJSON, Polyline, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Layers, CheckCircle } from 'lucide-react';
 import L from 'leaflet';
 import { useAppContext } from '../context/AppContext';
+import * as turf from '@turf/turf';
 
 export default function MapRoute() {
   const { entries } = useAppContext();
@@ -11,25 +12,72 @@ export default function MapRoute() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Pre-calculate a Set of completed Handhole keys for O(1) lookup
-  const completedHandholes = useMemo(() => {
-    const completed = new Set();
-    if (!entries) return completed;
+  // Pre-calculate indexes and completed segments for fast rendering
+  const { completedHandholes, completedSegments } = useMemo(() => {
+    const completedHH = new Set();
+    const segments = [];
+    if (!entries || !geoData) return { completedHandholes: completedHH, completedSegments: segments };
     
+    // 1. Build indexes of the GeoJSON data for quick lookup
+    const pointsMap = new Map(); // key: "Csa_Route_Loc", value: Point Feature
+    const linesMap = new Map();  // key: "Csa_Route", value: LineString Feature
+
+    geoData.features.forEach(f => {
+      const p = f.properties || {};
+      if (f.geometry && f.geometry.type === 'Point' && p.Csa && p.Rt__no_ && p.Loc__no_) {
+        pointsMap.set(`${p.Csa}_${p.Rt__no_}_${p.Loc__no_}`, f);
+      }
+      if (f.geometry && f.geometry.type === 'LineString' && p.CSA && p.Route) {
+        linesMap.set(`${p.CSA}_${p.Route}`, f);
+      }
+    });
+
+    // 2. Process Accepted entries
     entries.forEach(entry => {
-      // Only count verified entries that correspond to a Location (Handhole or generic location)
-      if (entry.status === 'Accepted') {
+      if (entry.status === 'Accepted' && entry.taskType !== 'Drop') {
         const rdt = entry.rdtSection;
         const route = entry.route ? entry.route.replace('Route ', '') : '';
         const loc = entry.location;
+        
         if (rdt && route && loc) {
-          // Create a composite key matching KML properties: Csa_Rt__no__Loc__no_
-          completed.add(`${rdt}_${route}_${loc}`);
+          const hhKey = `${rdt}_${route}_${loc}`;
+          completedHH.add(hhKey);
+
+          // Find the Route Line and the End Point (this location)
+          const routeLine = linesMap.get(`${rdt}_${route}`);
+          const endPoint = pointsMap.get(hhKey);
+          
+          if (routeLine && endPoint) {
+            // Find the Start Point (previous location, or start of the line if Loc 1)
+            let startPoint = null;
+            const prevLocStr = String(parseInt(loc, 10) - 1);
+            if (pointsMap.has(`${rdt}_${route}_${prevLocStr}`)) {
+              startPoint = pointsMap.get(`${rdt}_${route}_${prevLocStr}`);
+            } else {
+              // If no previous handhole, start from the very beginning of the Route Line
+              startPoint = turf.point(routeLine.geometry.coordinates[0]);
+            }
+            
+            try {
+              // Slice the line along the actual road curves using Turf!
+              const sliced = turf.lineSlice(startPoint, endPoint, routeLine);
+              // Turf returns coordinates as [lng, lat], Leaflet Polyline expects [lat, lng]
+              const latLngs = sliced.geometry.coordinates.map(coord => [coord[1], coord[0]]);
+              segments.push({ key: hhKey, positions: latLngs });
+            } catch (err) {
+              console.warn("Could not slice line segment for", hhKey, err);
+              // Fallback to straight line if Turf fails
+              const startCoords = startPoint.geometry.coordinates;
+              const endCoords = endPoint.geometry.coordinates;
+              segments.push({ key: hhKey, positions: [[startCoords[1], startCoords[0]], [endCoords[1], endCoords[0]]] });
+            }
+          }
         }
       }
     });
-    return completed;
-  }, [entries]);
+    
+    return { completedHandholes: completedHH, completedSegments: segments };
+  }, [entries, geoData]);
 
   useEffect(() => {
     // Fix Leaflet's default icon paths not working in React apps sometimes
@@ -183,6 +231,16 @@ export default function MapRoute() {
           {geoData && (
             <>
               <GeoJSON data={geoData} style={getStyle} onEachFeature={onEachFeature} pointToLayer={pointToLayer} />
+              
+              {/* Highlighted Completed Route Segments */}
+              {completedSegments.map(seg => (
+                <Polyline 
+                  key={`highlight-${seg.key}`}
+                  positions={seg.positions} 
+                  pathOptions={{ color: '#22c55e', weight: 8, opacity: 0.8, lineCap: 'round', lineJoin: 'round' }} 
+                />
+              ))}
+
               <FitBounds data={geoData} />
             </>
           )}
