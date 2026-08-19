@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useAppContext } from '../context/AppContext';
-import { Save, CheckCircle, FileSignature, Calendar, User } from 'lucide-react';
+import { Save, CheckCircle, FileSignature, Calendar, User, Upload, Image as ImageIcon, X } from 'lucide-react';
 
 const RDT_SECTIONS = [...Array.from({ length: 10 }, (_, i) => `RDT${i + 1}`), 'Toll N', 'Toll S'];
 const ROUTES = Array.from({ length: 20 }, (_, i) => `Route ${i + 1}`);
@@ -27,31 +27,30 @@ const Combobox = ({ id, label, value, onChange, options, placeholder, required }
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [value]);
+  }, [wrapperRef, value]);
 
-  const filteredOptions = options.filter(opt => 
+  const displayOptions = options.filter(opt => 
     String(opt).toLowerCase().includes(String(search).toLowerCase())
   );
-  const displayOptions = isOpen && search === '' ? options : filteredOptions;
 
   return (
-    <div ref={wrapperRef} className="relative">
+    <div className="relative" ref={wrapperRef}>
       <label htmlFor={id} className="block text-sm font-bold text-slate-700 mb-2">{label}</label>
       <div className="relative">
         <input
-          type="text"
           id={id}
+          type="text"
           value={search}
           onChange={(e) => {
             setSearch(e.target.value);
             setIsOpen(true);
-            onChange(e.target.value);
+            const exactMatch = options.find(o => String(o).toLowerCase() === e.target.value.toLowerCase());
+            if (exactMatch) onChange(exactMatch);
           }}
           onFocus={() => setIsOpen(true)}
-          onClick={() => { setSearch(''); setIsOpen(true); }}
           className="block w-full px-4 py-3 rounded-lg border border-slate-300 bg-white text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 shadow-sm transition-all font-medium"
-          placeholder={placeholder}
-          required={required && !value}
+          placeholder={placeholder || `Select ${label.split(' ')[0]}...`}
+          required={required}
           autoComplete="off"
         />
         <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
@@ -87,7 +86,7 @@ const Combobox = ({ id, label, value, onChange, options, placeholder, required }
 };
 
 export default function LoggingForm() {
-  const { authUser, addEntry } = useAppContext();
+  const { authUser, addEntry, addRedline } = useAppContext();
   
   const getLocalDateString = () => {
     const d = new Date();
@@ -117,6 +116,11 @@ export default function LoggingForm() {
   const [hasGroundRod, setHasGroundRod] = useState(false);
   const [hasSign, setHasSign] = useState(false);
   
+  // Redline Image State
+  const [imagePreview, setImagePreview] = useState(null);
+  const [imageData, setImageData] = useState(null);
+  const fileInputRef = useRef(null);
+  
   const [successMsg, setSuccessMsg] = useState(false);
 
   const locationOptions = useMemo(() => {
@@ -138,6 +142,18 @@ export default function LoggingForm() {
     setHasGroundRod(false);
     setHasSign(false);
   }, [taskType]);
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImageData(reader.result);
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -169,8 +185,29 @@ export default function LoggingForm() {
       loopQuantity
     });
 
+    if (imageData) {
+      addRedline({
+        inspector: authUser.name,
+        date,
+        psNumber: taskType === 'Drop' ? '' : psNumber,
+        rdtSection: taskType === 'Drop' ? '-' : rdtSection,
+        route: taskType === 'Drop' || rdtSection === 'Toll N' || rdtSection === 'Toll S' ? '-' : route,
+        location: taskType === 'Drop' ? '-' : location,
+        imageData
+      });
+    }
+
     if (taskType !== 'Drop' && taskType !== 'Hand Hole') setFootage('');
     setDropNumber('');
+    setLoopQuantity('');
+    setIsAddedBore(false);
+    setGpsCoordinates('');
+    setHasGroundRod(false);
+    setHasSign(false);
+    setImageData(null);
+    setImagePreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    
     setSuccessMsg(true);
     setTimeout(() => setSuccessMsg(false), 3000);
   };
@@ -479,6 +516,49 @@ export default function LoggingForm() {
               </div>
             </div>
           )}
+
+          {/* Section 4: Attach Redline */}
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 animate-in fade-in">
+            <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-6 border-b border-slate-100 pb-3">4. Attach Redline (Optional)</h3>
+            
+            <div className="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center bg-slate-50 relative hover:bg-slate-100 transition-colors">
+              <input 
+                type="file" 
+                ref={fileInputRef}
+                onChange={handleFileChange} 
+                accept="image/*"
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+              />
+              
+              {!imagePreview ? (
+                <div className="flex flex-col items-center justify-center space-y-4">
+                  <div className="h-16 w-16 bg-indigo-100 rounded-full flex items-center justify-center">
+                    <Upload className="h-8 w-8 text-indigo-600" />
+                  </div>
+                  <div>
+                    <p className="text-slate-700 font-bold text-lg">Tap to upload Redline picture</p>
+                    <p className="text-slate-500 text-sm mt-1">PNG, JPG up to 10MB</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="relative z-20">
+                  <img src={imagePreview} alt="Redline Preview" className="max-h-64 mx-auto rounded-lg shadow-md" />
+                  <button 
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setImageData(null);
+                      setImagePreview(null);
+                      if (fileInputRef.current) fileInputRef.current.value = '';
+                    }}
+                    className="absolute -top-4 -right-4 bg-red-100 text-red-600 p-2 rounded-full hover:bg-red-200 transition-colors shadow-sm"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
 
           {/* Submit Button & Success */}
           <div className="pt-8 flex flex-col items-center sm:flex-row sm:justify-between border-t border-slate-200">
