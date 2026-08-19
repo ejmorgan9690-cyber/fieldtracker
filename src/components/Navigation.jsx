@@ -12,9 +12,7 @@ export default function Navigation() {
           {/* Logo & Brand */}
           <div className="flex items-center w-full sm:w-auto justify-between sm:justify-start mb-4 sm:mb-0">
             <div className="flex items-center">
-              <div className="bg-indigo-600 p-2 rounded-lg mr-3">
-                <HardHat className="h-6 w-6 text-white" />
-              </div>
+              <img src="/mrl-logo.png" alt="MRL Logo" className="h-10 object-contain mr-3" />
               <span className="font-bold text-2xl text-slate-900 tracking-tight">Field Tracker</span>
               <span className="ml-3 text-xs font-bold text-indigo-600 bg-indigo-100 px-2 py-1 rounded-full">v1.0.1</span>
             </div>

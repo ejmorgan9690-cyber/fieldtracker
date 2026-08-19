@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { supabase } from '../supabaseClient';
 import { HardHat, Lock, User, KeyRound, AlertCircle, RefreshCw } from 'lucide-react';
@@ -83,9 +83,7 @@ export default function Login() {
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10">
         <div className="flex justify-center">
-          <div className="bg-indigo-600 p-3 rounded-xl shadow-lg ring-4 ring-white">
-            <HardHat className="h-10 w-10 text-white" />
-          </div>
+          <img src="/mrl-logo.png" alt="MRL Logo" className="h-20 object-contain drop-shadow-md" />
         </div>
         <h2 className="mt-6 text-center text-3xl font-extrabold text-slate-900 tracking-tight">
           Field Tracker
