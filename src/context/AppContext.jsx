@@ -220,6 +220,8 @@ export const AppProvider = ({ children }) => {
 
       if (error) {
         console.error('Error saving to Supabase:', error);
+        alert(`Failed to save to cloud: ${error.message}. Please check if you ran the latest SQL script in Supabase!`);
+        return; // Don't add to local state if cloud fails, so they don't think it succeeded
       }
 
       const newEntry = { ...entry, id: data && data.length > 0 ? data[0].id : Date.now().toString(), status: initialStatus };
@@ -228,10 +230,7 @@ export const AppProvider = ({ children }) => {
       localStorage.setItem('fieldTrackerEntries', JSON.stringify(newEntries));
     } catch (err) {
       console.error('Unexpected error saving to Supabase:', err);
-      const initialStatus = entry.taskType === 'Drop' ? 'Accepted' : 'Pending';
-      const newEntries = [...entries, { ...entry, id: Date.now().toString(), status: initialStatus }];
-      setEntries(newEntries);
-      localStorage.setItem('fieldTrackerEntries', JSON.stringify(newEntries));
+      alert(`Unexpected error saving to cloud: ${err.message}`);
     }
   };
 
