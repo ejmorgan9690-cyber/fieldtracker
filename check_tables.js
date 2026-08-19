@@ -1,0 +1,1 @@
+import { createClient } from '@supabase/supabase-js'; const s = createClient('https://owygcutjqfbjiihpevfr.supabase.co', 'sb_publishable_SRExcUhLmEReJ-W99l5Kjg_ug_cjCur'); async function test() { const { data, error } = await s.from('users').select('*').limit(1); console.log(error ? error.message : 'Table exists'); } test();

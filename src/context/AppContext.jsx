@@ -15,24 +15,12 @@ const AppContext = createContext();
 export const useAppContext = () => useContext(AppContext);
 
 export const AppProvider = ({ children }) => {
-  const [users, setUsers] = useState(() => {
-    const savedUsers = localStorage.getItem('fieldTrackerUsers');
-    if (savedUsers) return JSON.parse(savedUsers);
-    return [
-      { id: 'admin1', name: 'Resident', role: 'Resident', password: 'password123' },
-    ];
-  });
-
   const [authUser, setAuthUser] = useState(null);
   const [entries, setEntries] = useState([]);
   const [dailies, setDailies] = useState([]);
   const [gigs, setGigs] = useState([]);
   const [redlines, setRedlines] = useState([]);
   const [activeTab, setActiveTab] = useState('log');
-
-  useEffect(() => {
-    localStorage.setItem('fieldTrackerUsers', JSON.stringify(users));
-  }, [users]);
 
   useEffect(() => {
     const fetchEntries = async () => {
@@ -79,7 +67,8 @@ export const AppProvider = ({ children }) => {
     const savedRedlines = localStorage.getItem('fieldTrackerRedlines');
     if (savedRedlines) setRedlines(JSON.parse(savedRedlines));
     
-    const savedUser = localStorage.getItem('fieldTrackerAuth');
+    // Check both local and session storage for active session
+    const savedUser = localStorage.getItem('fieldTrackerAuth') || sessionStorage.getItem('fieldTrackerAuth');
     if (savedUser) {
       const parsedUser = JSON.parse(savedUser);
       setAuthUser(parsedUser);
@@ -87,40 +76,75 @@ export const AppProvider = ({ children }) => {
     }
   }, []);
 
-  const login = (name, password) => {
-    const user = users.find(u => u.name.toLowerCase() === name.toLowerCase());
-    
-    // Simplify verification: Internal inspectors can log in without strict password checks
-    if (user && (user.role === 'Inspector' || user.password === password)) {
-      setAuthUser(user);
-      localStorage.setItem('fieldTrackerAuth', JSON.stringify(user));
-      setActiveTab(user.role === 'Resident' ? 'dashboard' : 'log');
-      return true;
+  const login = async (username, password, rememberMe) => {
+    try {
+      const { data, error } = await supabase
+        .from('app_users')
+        .select('*')
+        .ilike('username', username)
+        .eq('password', password);
+
+      if (error) {
+        console.error("Login error", error);
+        return { success: false, error: 'Database error connecting to users.' };
+      }
+
+      if (data && data.length > 0) {
+        const user = data[0];
+        const authPayload = { id: user.id, name: user.username, role: user.role };
+        setAuthUser(authPayload);
+        
+        if (rememberMe) {
+          localStorage.setItem('fieldTrackerAuth', JSON.stringify(authPayload));
+          localStorage.setItem('fieldTrackerRememberedUser', username);
+        } else {
+          sessionStorage.setItem('fieldTrackerAuth', JSON.stringify(authPayload));
+        }
+        
+        setActiveTab(user.role === 'Resident' ? 'dashboard' : 'log');
+        return { success: true };
+      } else {
+        return { success: false, error: 'Invalid username or password' };
+      }
+    } catch (err) {
+      return { success: false, error: 'Network error connecting to database.' };
     }
-    return false;
   };
 
-  const register = (name, password) => {
-    if (users.some(u => u.name.toLowerCase() === name.toLowerCase())) {
-      return false; // User already exists
+  const register = async (username, password, role) => {
+    try {
+      const { data: existing } = await supabase.from('app_users').select('id').ilike('username', username);
+      if (existing && existing.length > 0) {
+        return { success: false, error: 'Username is already taken. Please choose another.' };
+      }
+
+      const { data, error } = await supabase
+        .from('app_users')
+        .insert([{ username, password, role }])
+        .select();
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      if (data && data.length > 0) {
+        const user = data[0];
+        const authPayload = { id: user.id, name: user.username, role: user.role };
+        setAuthUser(authPayload);
+        localStorage.setItem('fieldTrackerAuth', JSON.stringify(authPayload));
+        setActiveTab(user.role === 'Resident' ? 'dashboard' : 'log');
+        return { success: true };
+      }
+      return { success: false, error: 'Unknown error creating account' };
+    } catch (err) {
+      return { success: false, error: 'Network error connecting to database.' };
     }
-    const newUser = {
-      id: Date.now().toString(),
-      name: name.trim(),
-      password,
-      role: 'Inspector'
-    };
-    setUsers([...users, newUser]);
-    
-    setAuthUser(newUser);
-    localStorage.setItem('fieldTrackerAuth', JSON.stringify(newUser));
-    setActiveTab('log');
-    return true;
   };
 
   const logout = () => {
     setAuthUser(null);
     localStorage.removeItem('fieldTrackerAuth');
+    sessionStorage.removeItem('fieldTrackerAuth');
   };
 
   const addEntry = async (entry) => {
