@@ -1,13 +1,35 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { MapContainer, TileLayer, GeoJSON, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Layers } from 'lucide-react';
+import { Layers, CheckCircle } from 'lucide-react';
 import L from 'leaflet';
+import { useAppContext } from '../context/AppContext';
 
 export default function MapRoute() {
+  const { entries } = useAppContext();
   const [geoData, setGeoData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Pre-calculate a Set of completed Handhole keys for O(1) lookup
+  const completedHandholes = useMemo(() => {
+    const completed = new Set();
+    if (!entries) return completed;
+    
+    entries.forEach(entry => {
+      // Only count verified entries that correspond to a Location (Handhole or generic location)
+      if (entry.status === 'Accepted') {
+        const rdt = entry.rdtSection;
+        const route = entry.route ? entry.route.replace('Route ', '') : '';
+        const loc = entry.location;
+        if (rdt && route && loc) {
+          // Create a composite key matching KML properties: Csa_Rt__no__Loc__no_
+          completed.add(`${rdt}_${route}_${loc}`);
+        }
+      }
+    });
+    return completed;
+  }, [entries]);
 
   useEffect(() => {
     // Fix Leaflet's default icon paths not working in React apps sometimes
@@ -50,11 +72,21 @@ export default function MapRoute() {
     const isHandhole = p.Loc__type === 'HH' || (p.name && p.name.match(/^[A-Z0-9]+-[0-9]+$/)) || (p.icon && p.icon.includes('square'));
     
     if (isHandhole) {
-      // Create a small black square with the label next to it
+      // Check if this specific handhole is completed
+      // The KML properties: Csa (e.g. 'RDT1'), Rt__no_ (e.g. '3C'), Loc__no_ (e.g. '1')
+      const csa = p.Csa || '';
+      const rt = p.Rt__no_ || '';
+      const loc = p.Loc__no_ || '';
+      const isCompleted = completedHandholes.has(`${csa}_${rt}_${loc}`);
+      
+      const bgColor = isCompleted ? '#22c55e' : 'black'; // Green if completed, black if pending
+      const borderColor = isCompleted ? '#16a34a' : 'white';
+      
+      // Create a small box with the label next to it
       const html = `
         <div style="display: flex; align-items: center; transform: translate(-5px, -5px);">
-          <div style="width: 10px; height: 10px; background-color: black; border: 1px solid white; flex-shrink: 0;"></div>
-          <span style="margin-left: 4px; font-size: 11px; font-weight: 900; color: black; text-shadow: 1px 1px 0 #fff, -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff; white-space: nowrap;">
+          <div style="width: 12px; height: 12px; background-color: ${bgColor}; border: 1.5px solid ${borderColor}; flex-shrink: 0; box-shadow: 0 1px 2px rgba(0,0,0,0.3);"></div>
+          <span style="margin-left: 5px; font-size: 11px; font-weight: 900; color: ${isCompleted ? '#16a34a' : 'black'}; text-shadow: 1px 1px 0 #fff, -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff; white-space: nowrap;">
             ${p.name || ''}
           </span>
         </div>
@@ -64,18 +96,18 @@ export default function MapRoute() {
         icon: L.divIcon({
           className: 'custom-hh-icon',
           html: html,
-          iconSize: [0, 0], // The CSS handles the layout
+          iconSize: [0, 0],
           iconAnchor: [0, 0]
         })
       });
     } else {
       // Other generic points (make them small circle markers so they don't block the screen)
       return L.circleMarker(latlng, {
-        radius: 4,
+        radius: 3.5,
         fillColor: p['icon-color'] || '#3b82f6',
         color: '#ffffff',
         weight: 1,
-        fillOpacity: 0.8
+        fillOpacity: 0.7
       });
     }
   };
@@ -141,6 +173,7 @@ export default function MapRoute() {
           center={[36.737, -96.499]} // Fallback center
           zoom={12} 
           scrollWheelZoom={true} 
+          preferCanvas={true}
           style={{ height: '100%', width: '100%' }}
         >
           <TileLayer
@@ -154,6 +187,25 @@ export default function MapRoute() {
             </>
           )}
         </MapContainer>
+
+        {/* Legend Overlay */}
+        <div className="absolute bottom-6 right-6 z-[1000] bg-white/90 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-slate-200">
+          <h4 className="text-sm font-bold text-slate-800 mb-3 border-b border-slate-200 pb-2">Status Legend</h4>
+          <div className="space-y-2">
+            <div className="flex items-center">
+              <div className="w-3 h-3 bg-black border border-white shadow-sm mr-2"></div>
+              <span className="text-xs font-semibold text-slate-600">Pending / Unlogged</span>
+            </div>
+            <div className="flex items-center">
+              <div className="w-3 h-3 bg-green-500 border border-green-600 shadow-sm mr-2"></div>
+              <span className="text-xs font-semibold text-slate-600">Resident Accepted</span>
+            </div>
+            <div className="flex items-center mt-2 pt-2 border-t border-slate-100">
+              <div className="w-4 h-1 bg-red-500 mr-2 rounded-full"></div>
+              <span className="text-xs font-semibold text-slate-600">Fiber Route</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
