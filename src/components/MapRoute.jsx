@@ -37,7 +37,7 @@ export default function MapRoute() {
 
     // 1. Build indexes of the GeoJSON data for quick lookup
     const pointsMap = new Map(); // key: "Town_Csa_Route_Loc"
-    const linesMap = new Map();  // key: "Town_Csa_Route"
+    const linesMap = new Map();  // key: "Town_Csa_Route", value: Array of LineStrings
 
     geoData.features.forEach(f => {
       const p = f.properties || {};
@@ -49,7 +49,9 @@ export default function MapRoute() {
       }
       if (f.geometry && f.geometry.type === 'LineString' && p.CSA && p.Route) {
         const normCsa = normalizeRdt(p.CSA);
-        linesMap.set(`${town}_${normCsa}_${p.Route}`, f);
+        const key = `${town}_${normCsa}_${p.Route}`;
+        if (!linesMap.has(key)) linesMap.set(key, []);
+        linesMap.get(key).push(f);
       }
     });
 
@@ -61,15 +63,25 @@ export default function MapRoute() {
         const route = entry.route ? entry.route.replace('Route ', '') : '';
         const loc = entry.location;
         
-        if (rdt && route && loc) {
-          const hhKey = `${town}_${rdt}_${route}_${loc}`;
-          completedHH.add(hhKey);
-
-          // Find the Route Line and the End Point (this location)
-          const routeLine = linesMap.get(`${town}_${rdt}_${route}`);
-          const endPoint = pointsMap.get(hhKey);
-          
-          if (routeLine && endPoint) {
+        const hhKey = `${town}_${rdt}_${route}_${loc}`;
+        completedHH.add(hhKey);
+        
+        const routeLines = linesMap.get(`${town}_${rdt}_${route}`);
+        const endPoint = pointsMap.get(hhKey);
+        
+        if (routeLines && routeLines.length > 0 && endPoint) {
+          // Find the specific line segment that this handhole sits on
+          let routeLine = routeLines[0];
+          if (routeLines.length > 1) {
+            let minD = Infinity;
+            routeLines.forEach(l => {
+              const d = turf.pointToLineDistance(endPoint, l);
+              if (d < minD) {
+                minD = d;
+                routeLine = l;
+              }
+            });
+          }
             // Find the Start Point (previous location, or start of the line if Loc 1)
             let startPoint = null;
             const prevLocStr = String(parseInt(loc, 10) - 1);
@@ -93,7 +105,6 @@ export default function MapRoute() {
             }
           }
         }
-      }
     });
     
     return { completedHandholes: completedHH, completedSegments: segments };
