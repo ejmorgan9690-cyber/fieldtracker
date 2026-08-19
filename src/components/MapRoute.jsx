@@ -6,6 +6,14 @@ import L from 'leaflet';
 import { useAppContext } from '../context/AppContext';
 import * as turf from '@turf/turf';
 
+const getTownKey = (exchange) => {
+  if (!exchange) return 'Unknown';
+  const ex = exchange.toLowerCase();
+  if (ex.includes('shid') || ex.includes('tel')) return 'Shidler';
+  if (ex.includes('wyn')) return 'Wynona';
+  return exchange;
+};
+
 export default function MapRoute() {
   const { entries } = useAppContext();
   const [geoData, setGeoData] = useState(null);
@@ -17,14 +25,6 @@ export default function MapRoute() {
     const completedHH = new Set();
     const segments = [];
     if (!entries || !geoData) return { completedHandholes: completedHH, completedSegments: segments };
-    
-    const getTownKey = (exchange) => {
-      if (!exchange) return 'Unknown';
-      const ex = exchange.toLowerCase();
-      if (ex.includes('shid') || ex.includes('tel')) return 'Shidler';
-      if (ex.includes('wyn')) return 'Wynona';
-      return exchange;
-    };
 
     // 1. Build indexes of the GeoJSON data for quick lookup
     const pointsMap = new Map(); // key: "Town_Csa_Route_Loc"
@@ -85,7 +85,7 @@ export default function MapRoute() {
       }
     });
     
-    return { completedHandholes: completedHH, completedSegments: segments, getTownKey };
+    return { completedHandholes: completedHH, completedSegments: segments };
   }, [entries, geoData]);
 
   useEffect(() => {
