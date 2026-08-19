@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://earth.google.com/kml/2.1">
+  <Document>
+  <name>KanOkla Telephone</name>
+  <open>1</open>
+    <LookAt>
+		<longitude>-96.499224</longitude>   
+		<latitude>36.737296</latitude>
+		<altitude>87800</altitude>
+		<altitudeMode>absolute</altitudeMode>
+  </LookAt>
+  <NetworkLink>
+    <name>KanOkla Drop Staking</name>
+	<open>0</open>	
+    <visibility>1</visibility>
+	<refreshVisibility>0</refreshVisibility>
+    <Link>
+      <href>https://ge.mrleng.com/staking/kanokla160/kanokla/drops.kml</href>
+	  <refreshMode>onInterval</refreshMode>
+	  <refreshInterval>30</refreshInterval>
+    </Link>
+  </NetworkLink>
+  <NetworkLink>
+    <name>KanOkla Design</name>
+	<open>0</open>	
+    <visibility>1</visibility>
+	<refreshVisibility>0</refreshVisibility>
+    <Link>
+	  <href>https://ge.mrleng.com/fieldkml/KanOkla - As-Staked Design.kmz</href>
+	  <refreshMode>onInterval</refreshMode>
+	  <refreshInterval>30</refreshInterval>
+    </Link>
+  </NetworkLink>
+  <NetworkLink>
+    <name>Kaw Nation Drop Staking</name>
+	<open>0</open>	
+    <visibility>0</visibility>
+	<refreshVisibility>0</refreshVisibility>
+    <Link>
+      <href>https://ge.mrleng.com/staking/kanokla160/kawnation/drops.kml</href>
+	  <refreshMode>onInterval</refreshMode>
+	  <refreshInterval>30</refreshInterval>
+    </Link>
+  </NetworkLink>
+  <NetworkLink>
+    <name>Kaw Nation</name>
+	<open>0</open>	
+    <visibility>0</visibility>
+	<refreshVisibility>0</refreshVisibility>
+    <Link>
+      <href>https://ge.mrleng.com/fieldkml/Kaw Nation Drop Staking.kmz</href>
+	  <refreshMode>onInterval</refreshMode>
+	  <refreshInterval>30</refreshInterval>
+    </Link>
+  </NetworkLink>
+  <ScreenOverlay>
+    <name>Legend</name>
+    <visibility>1</visibility>
+    <Icon>
+       <href>https://ge.mrleng.com/staking/legend_gatelocked.jpg</href>
+    </Icon>
+    <overlayXY x=".5" y="1" xunits="fraction" yunits="fraction" />
+    <screenXY x=".5" y="1" xunits="fraction" yunits="fraction" />
+    <size x="0" y="0" xunits="pixels" yunits="pixels" />
+  </ScreenOverlay>
+  </Document>
+</kml>

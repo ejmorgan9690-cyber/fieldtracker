@@ -15,6 +15,7 @@ import MasterDrops from './components/MasterDrops';
 import PendingReview from './components/PendingReview';
 import AcceptedLogFeed from './components/AcceptedLogFeed';
 import MasterUnitSheet from './components/MasterUnitSheet';
+import MapRoute from './components/MapRoute';
 
 const MainContent = () => {
   const { authUser, activeTab } = useAppContext();
@@ -23,10 +24,14 @@ const MainContent = () => {
     return <Login />;
   }
 
+  // If tab is map, don't pad so much so it takes full screen
+  const isMapTab = activeTab === 'map';
+
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
       <Navigation />
-      <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+      <main className={isMapTab ? "" : "max-w-7xl mx-auto p-4 sm:p-6 lg:p-8"}>
+        {activeTab === 'map' && <MapRoute />}
         {authUser.role === 'Inspector' && activeTab === 'log' && <LoggingForm />}
         {authUser.role === 'Inspector' && activeTab === 'dailies' && <DailiesForm />}
         {authUser.role === 'Inspector' && activeTab === 'redlines' && <RedlinesForm />}
