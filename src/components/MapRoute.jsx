@@ -6,12 +6,16 @@ import L from 'leaflet';
 import { useAppContext } from '../context/AppContext';
 import * as turf from '@turf/turf';
 
-const getTownKey = (exchange) => {
-  if (!exchange) return 'Unknown';
-  const ex = exchange.toLowerCase();
+const getTownKey = (feature) => {
+  const p = feature.properties || {};
+  const exchangeInfo = p.Exchange || p.path || p.layer || '';
+  if (!exchangeInfo) return 'Unknown';
+  
+  const ex = exchangeInfo.toLowerCase();
   if (ex.includes('shid') || ex.includes('tel')) return 'Shidler';
   if (ex.includes('wyn')) return 'Wynona';
-  return exchange;
+  
+  return 'Unknown';
 };
 
 export default function MapRoute() {
@@ -32,7 +36,7 @@ export default function MapRoute() {
 
     geoData.features.forEach(f => {
       const p = f.properties || {};
-      const town = getTownKey(p.Exchange);
+      const town = getTownKey(f);
       
       if (f.geometry && f.geometry.type === 'Point' && p.Csa && p.Rt__no_ && p.Loc__no_) {
         pointsMap.set(`${town}_${p.Csa}_${p.Rt__no_}_${p.Loc__no_}`, f);
@@ -131,7 +135,7 @@ export default function MapRoute() {
     if (isHandhole) {
       // Check if this specific handhole is completed
       // The KML properties: Csa (e.g. 'RDT1'), Rt__no_ (e.g. '3C'), Loc__no_ (e.g. '1')
-      const town = getTownKey(p.Exchange);
+      const town = getTownKey(feature);
       const csa = p.Csa || '';
       const rt = p.Rt__no_ || '';
       const loc = p.Loc__no_ || '';
@@ -180,7 +184,139 @@ export default function MapRoute() {
     }
   };
 
-  // Component to automatically adjust bounds to fit the geojson data
+  // Component to handle Map Search
+  const MapSearch = ({ geoData }) => {
+    const map = useMap();
+    const [searchTown, setSearchTown] = useState('Shidler');
+    const [searchRdt, setSearchRdt] = useState('');
+    const [searchRoute, setSearchRoute] = useState('');
+    const [searchLoc, setSearchLoc] = useState('');
+
+    const options = useMemo(() => {
+      if (!geoData) return { rdts: [], routes: [], locs: [] };
+      const rdts = new Set();
+      const routes = new Set();
+      const locs = new Set();
+
+      geoData.features.forEach(f => {
+        const p = f.properties || {};
+        if (getTownKey(f) !== searchTown) return;
+
+        if (p.Csa) rdts.add(p.Csa);
+        if (p.CSA) rdts.add(p.CSA);
+
+        if (searchRdt && (p.Csa === searchRdt || p.CSA === searchRdt)) {
+          if (p.Rt__no_) routes.add(p.Rt__no_);
+          if (p.Route) routes.add(p.Route);
+          
+          if (searchRoute && (p.Rt__no_ === searchRoute || p.Route === searchRoute)) {
+            if (p.Loc__no_) locs.add(p.Loc__no_);
+          }
+        }
+      });
+      return { 
+        rdts: Array.from(rdts).sort(), 
+        routes: Array.from(routes).sort((a, b) => a.localeCompare(b, undefined, { numeric: true })), 
+        locs: Array.from(locs).sort((a, b) => parseInt(a) - parseInt(b)) 
+      };
+    }, [geoData, searchTown, searchRdt, searchRoute]);
+
+    const handleSearch = (e) => {
+      e.preventDefault();
+      if (!geoData) return;
+
+      const matchedFeatures = geoData.features.filter(f => {
+        const p = f.properties || {};
+        if (getTownKey(f) !== searchTown) return false;
+        
+        if (searchRdt && p.Csa !== searchRdt && p.CSA !== searchRdt) return false;
+        if (searchRoute && p.Rt__no_ !== searchRoute && p.Route !== searchRoute) return false;
+        if (searchLoc && p.Loc__no_ !== searchLoc) return false;
+
+        // If they didn't select anything beyond town, don't just match all
+        if (!searchRdt && !searchRoute && !searchLoc) return false;
+
+        return true;
+      });
+
+      if (matchedFeatures.length > 0) {
+        const group = L.geoJSON({ type: 'FeatureCollection', features: matchedFeatures });
+        const bounds = group.getBounds();
+        if (bounds.isValid()) {
+          map.fitBounds(bounds, { padding: [50, 50], maxZoom: 18, duration: 1.5 });
+        }
+      } else {
+        alert('No exact location match found on map.');
+      }
+    };
+
+    return (
+      <div className="absolute top-4 right-4 z-[1000] bg-white/95 backdrop-blur-md p-4 rounded-xl shadow-lg border border-slate-200 w-80">
+        <h4 className="text-sm font-bold text-slate-800 mb-3 border-b border-slate-200 pb-2">Location Jump</h4>
+        <form onSubmit={handleSearch} className="space-y-3">
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">Town</label>
+            <select 
+              value={searchTown} 
+              onChange={(e) => { setSearchTown(e.target.value); setSearchRdt(''); setSearchRoute(''); setSearchLoc(''); }}
+              className="w-full text-sm rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 py-1.5"
+            >
+              <option value="Shidler">Shidler</option>
+              <option value="Wynona">Wynona</option>
+            </select>
+          </div>
+          
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">Node / RDT Section</label>
+            <select 
+              value={searchRdt} 
+              onChange={(e) => { setSearchRdt(e.target.value); setSearchRoute(''); setSearchLoc(''); }}
+              className="w-full text-sm rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 py-1.5"
+            >
+              <option value="">-- Select Node --</option>
+              {options.rdts.map(r => <option key={r} value={r}>{r}</option>)}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">Route</label>
+            <select 
+              value={searchRoute} 
+              onChange={(e) => { setSearchRoute(e.target.value); setSearchLoc(''); }}
+              disabled={!searchRdt}
+              className="w-full text-sm rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 py-1.5 disabled:bg-slate-50 disabled:text-slate-400"
+            >
+              <option value="">-- Select Route --</option>
+              {options.routes.map(r => <option key={r} value={r}>Route {r}</option>)}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">Location (Handhole) <span className="font-normal text-slate-400">- Optional</span></label>
+            <select 
+              value={searchLoc} 
+              onChange={(e) => setSearchLoc(e.target.value)}
+              disabled={!searchRoute}
+              className="w-full text-sm rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 py-1.5 disabled:bg-slate-50 disabled:text-slate-400"
+            >
+              <option value="">-- All Locations --</option>
+              {options.locs.map(l => <option key={l} value={l}>Location {l}</option>)}
+            </select>
+          </div>
+
+          <button 
+            type="submit"
+            disabled={!searchRdt}
+            className="w-full mt-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-md shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+          >
+            Jump to Location
+          </button>
+        </form>
+      </div>
+    );
+  };
+
+  // Component to automatically adjust bounds to fit the geojson data on initial load
   const FitBounds = ({ data }) => {
     const map = useMap();
     useEffect(() => {
@@ -252,6 +388,7 @@ export default function MapRoute() {
               ))}
 
               <FitBounds data={geoData} />
+              <MapSearch geoData={geoData} />
             </>
           )}
         </MapContainer>
