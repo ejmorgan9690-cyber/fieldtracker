@@ -30,6 +30,11 @@ export default function MapRoute() {
     const segments = [];
     if (!entries || !geoData) return { completedHandholes: completedHH, completedSegments: segments };
 
+    const normalizeRdt = (val) => {
+      if (!val) return '';
+      return val.replace(/^Node\s+/i, '').trim();
+    };
+
     // 1. Build indexes of the GeoJSON data for quick lookup
     const pointsMap = new Map(); // key: "Town_Csa_Route_Loc"
     const linesMap = new Map();  // key: "Town_Csa_Route"
@@ -39,10 +44,12 @@ export default function MapRoute() {
       const town = getTownKey(f);
       
       if (f.geometry && f.geometry.type === 'Point' && p.Csa && p.Rt__no_ && p.Loc__no_) {
-        pointsMap.set(`${town}_${p.Csa}_${p.Rt__no_}_${p.Loc__no_}`, f);
+        const normCsa = normalizeRdt(p.Csa);
+        pointsMap.set(`${town}_${normCsa}_${p.Rt__no_}_${p.Loc__no_}`, f);
       }
       if (f.geometry && f.geometry.type === 'LineString' && p.CSA && p.Route) {
-        linesMap.set(`${town}_${p.CSA}_${p.Route}`, f);
+        const normCsa = normalizeRdt(p.CSA);
+        linesMap.set(`${town}_${normCsa}_${p.Route}`, f);
       }
     });
 
@@ -50,7 +57,7 @@ export default function MapRoute() {
     entries.forEach(entry => {
       if (entry.status === 'Accepted' && entry.taskType !== 'Drop') {
         const town = entry.town || 'Shidler'; // Default to Shidler for older logs
-        const rdt = entry.rdtSection;
+        const rdt = normalizeRdt(entry.rdtSection);
         const route = entry.route ? entry.route.replace('Route ', '') : '';
         const loc = entry.location;
         
@@ -136,7 +143,7 @@ export default function MapRoute() {
       // Check if this specific handhole is completed
       // The KML properties: Csa (e.g. 'RDT1'), Rt__no_ (e.g. '3C'), Loc__no_ (e.g. '1')
       const town = getTownKey(feature);
-      const csa = p.Csa || '';
+      const csa = p.Csa ? p.Csa.replace(/^Node\s+/i, '').trim() : '';
       const rt = p.Rt__no_ || '';
       const loc = p.Loc__no_ || '';
       const isCompleted = completedHandholes.has(`${town}_${csa}_${rt}_${loc}`);
@@ -202,10 +209,13 @@ export default function MapRoute() {
         const p = f.properties || {};
         if (getTownKey(f) !== searchTown) return;
 
-        if (p.Csa) rdts.add(p.Csa);
-        if (p.CSA) rdts.add(p.CSA);
+        const csaPoint = p.Csa ? p.Csa.replace(/^Node\s+/i, '').trim() : '';
+        const csaLine = p.CSA ? p.CSA.replace(/^Node\s+/i, '').trim() : '';
 
-        if (searchRdt && (p.Csa === searchRdt || p.CSA === searchRdt)) {
+        if (csaPoint) rdts.add(csaPoint);
+        if (csaLine) rdts.add(csaLine);
+
+        if (searchRdt && (csaPoint === searchRdt || csaLine === searchRdt)) {
           if (p.Rt__no_) routes.add(p.Rt__no_);
           if (p.Route) routes.add(p.Route);
           
@@ -229,7 +239,10 @@ export default function MapRoute() {
         const p = f.properties || {};
         if (getTownKey(f) !== searchTown) return false;
         
-        if (searchRdt && p.Csa !== searchRdt && p.CSA !== searchRdt) return false;
+        const csaPoint = p.Csa ? p.Csa.replace(/^Node\s+/i, '').trim() : '';
+        const csaLine = p.CSA ? p.CSA.replace(/^Node\s+/i, '').trim() : '';
+
+        if (searchRdt && csaPoint !== searchRdt && csaLine !== searchRdt) return false;
         if (searchRoute && p.Rt__no_ !== searchRoute && p.Route !== searchRoute) return false;
         if (searchLoc && p.Loc__no_ !== searchLoc) return false;
 
