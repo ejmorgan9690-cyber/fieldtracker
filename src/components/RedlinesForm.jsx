@@ -5,8 +5,15 @@ import { Map, Upload, Image as ImageIcon, X } from 'lucide-react';
 export default function RedlinesForm() {
   const { authUser, addRedline } = useAppContext();
   
-  const today = new Date().toISOString().split('T')[0];
-  const [date, setDate] = useState(today);
+  const getLocalDateString = () => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const [date, setDate] = useState(getLocalDateString());
   const [rdtSection, setRdtSection] = useState('RDT1');
   const [route, setRoute] = useState('Route 1');
   const [location, setLocation] = useState('1');

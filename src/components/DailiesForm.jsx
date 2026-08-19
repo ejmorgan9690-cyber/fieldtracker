@@ -5,10 +5,17 @@ import { FileText, Save, CheckCircle } from 'lucide-react';
 export default function DailiesForm() {
   const { authUser, addDaily } = useAppContext();
   
-  const today = new Date().toISOString().split('T')[0];
+  const getLocalDateString = () => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
 
-  const [date, setDate] = useState(today);
+  const [date, setDate] = useState(getLocalDateString());
   const [workType, setWorkType] = useState('');
+  const [totalEmployees, setTotalEmployees] = useState('');
   const [contractor, setContractor] = useState('');
   const [description, setDescription] = useState('');
   const [resources, setResources] = useState('');
