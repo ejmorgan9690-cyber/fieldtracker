@@ -39,9 +39,9 @@ export default function PendingReview() {
             <table className="min-w-full divide-y divide-slate-200">
               <thead className="bg-slate-50">
                 <tr>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase">Date</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase">PS Number</th>
                   <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase">Inspector</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase">Date</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase">P/S</th>
                   <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase">Task Type</th>
                   <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase">Location</th>
                   <th className="px-6 py-4 text-center text-xs font-bold text-slate-500 uppercase">Action</th>
@@ -50,9 +50,9 @@ export default function PendingReview() {
               <tbody className="bg-white divide-y divide-slate-100">
                 {pendingLogs.map((log) => (
                   <tr key={log.id} className="hover:bg-indigo-50/50 cursor-pointer transition-colors" onClick={() => setSelectedEntry(log)}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">{formatDate(log.date)}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">{log.inspector}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">{formatDate(log.date)}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-indigo-600">{log.psNumber}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">{log.inspector}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
                       <span className="px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full bg-slate-100 text-slate-800 border border-slate-200">
                         {log.taskType}
