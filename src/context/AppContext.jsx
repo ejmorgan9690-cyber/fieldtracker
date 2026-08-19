@@ -213,9 +213,21 @@ export const AppProvider = ({ children }) => {
         has_sign: entry.hasSign || false
       };
 
+      const payloads = [supabasePayload];
+
+      // If they checked the Fiber Loop box, generate a second distinct payload for the loops!
+      if (entry.taskType === 'Fiber' && entry.isFiberLoop) {
+        payloads.push({
+          ...supabasePayload,
+          unit_code: entry.unitCode ? `${entry.unitCode} LOOP` : 'LOOP',
+          footage: entry.loopQuantity || '1',
+          task_type: 'Fiber Loop'
+        });
+      }
+
       const { data, error } = await supabase
         .from('production_logs')
-        .insert([supabasePayload])
+        .insert(payloads)
         .select();
 
       if (error) {
@@ -224,8 +236,29 @@ export const AppProvider = ({ children }) => {
         return; // Don't add to local state if cloud fails, so they don't think it succeeded
       }
 
-      const newEntry = { ...entry, id: data && data.length > 0 ? data[0].id : Date.now().toString(), status: initialStatus };
-      const newEntries = [...entries, newEntry];
+      const addedEntries = data.map(row => ({
+        id: row.id,
+        inspector: row.inspector_name,
+        date: row.service_date,
+        taskType: row.task_type,
+        footage: row.footage,
+        rdtSection: row.section,
+        route: row.route,
+        location: row.location,
+        boreNumber: row.task_type === 'Bore' ? row.spec_number : null,
+        fiberCount: row.task_type === 'Fiber' ? row.spec_number : null,
+        handHoleNumber: row.task_type === 'Hand Hole' ? row.spec_number : null,
+        dropNumber: row.task_type === 'Drop' ? row.spec_number : null,
+        isAddedBore: row.is_added_bore || false,
+        gpsCoordinates: row.gps_coordinates || null,
+        psNumber: row.ps_number || '',
+        status: row.status || 'Pending',
+        unitCode: row.unit_code || '',
+        hasGroundRod: row.has_ground_rod || false,
+        hasSign: row.has_sign || false
+      }));
+
+      const newEntries = [...entries, ...addedEntries];
       setEntries(newEntries);
       localStorage.setItem('fieldTrackerEntries', JSON.stringify(newEntries));
     } catch (err) {

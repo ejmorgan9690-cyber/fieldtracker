@@ -4,7 +4,7 @@ import { Save, CheckCircle, FileSignature, Calendar, User } from 'lucide-react';
 
 const RDT_SECTIONS = [...Array.from({ length: 10 }, (_, i) => `RDT${i + 1}`), 'Toll N', 'Toll S'];
 const ROUTES = Array.from({ length: 20 }, (_, i) => `Route ${i + 1}`);
-const TASK_TYPES = ['Bore', 'Plow Duct', 'Fiber', 'Fiber Loop', 'Hand Hole', 'Drop'];
+const TASK_TYPES = ['Bore', 'Plow Duct', 'Fiber', 'Hand Hole', 'Drop'];
 const FIBER_COUNTS = ['4 count', '12 count', '24 count', '48 count', '96 count', '144 count', '288 count'];
 const BORE_NUMBERS = Array.from({ length: 30 }, (_, i) => `${i + 1}`);
 
@@ -113,6 +113,7 @@ export default function LoggingForm() {
   // Unit Code State
   const [unitCode, setUnitCode] = useState('');
   const [isFiberLoop, setIsFiberLoop] = useState(false);
+  const [loopQuantity, setLoopQuantity] = useState('');
   const [hasGroundRod, setHasGroundRod] = useState(false);
   const [hasSign, setHasSign] = useState(false);
   
@@ -161,9 +162,11 @@ export default function LoggingForm() {
       isAddedBore: taskType === 'Bore' ? isAddedBore : false,
       gpsCoordinates: taskType === 'Bore' && isAddedBore ? gpsCoordinates : null,
       psNumber: taskType === 'Drop' ? '' : psNumber,
-      unitCode: taskType === 'Fiber' && isFiberLoop ? `${unitCode} LOOP` : unitCode,
-      hasGroundRod: taskType === 'Hand Hole' ? hasGroundRod : false,
-      hasSign: taskType === 'Hand Hole' ? hasSign : false
+      unitCode: unitCode,
+      hasGroundRod,
+      hasSign,
+      isFiberLoop,
+      loopQuantity
     });
 
     if (taskType !== 'Drop' && taskType !== 'Hand Hole') setFootage('');
@@ -357,17 +360,38 @@ export default function LoggingForm() {
                     options={['BFO 24I', 'BFO 48I', 'BFO 72I', 'BFO 96I']} 
                     required 
                   />
-                </div>
-              ) : taskType === 'Fiber Loop' ? (
-                <div className="animate-in fade-in slide-in-from-top-2 space-y-4">
-                  <Combobox 
-                    id="unitCode" 
-                    label="Unit Code (Fiber Loop)" 
-                    value={unitCode} 
-                    onChange={setUnitCode} 
-                    options={['BFO 24I LOOP', 'BFO 48I LOOP', 'BFO 72I LOOP', 'BFO 96I LOOP']} 
-                    required 
-                  />
+                  <div className="flex items-center pt-2">
+                    <input
+                      id="isFiberLoop"
+                      type="checkbox"
+                      checked={isFiberLoop}
+                      onChange={(e) => setIsFiberLoop(e.target.checked)}
+                      className="h-5 w-5 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"
+                    />
+                    <label htmlFor="isFiberLoop" className="ml-2 text-sm font-bold text-slate-700">
+                      Include Storage Loop (Generates a separate pay unit row)
+                    </label>
+                  </div>
+                  {isFiberLoop && (
+                    <div className="animate-in fade-in slide-in-from-top-2 pt-2">
+                      <label htmlFor="loopQuantity" className="block text-sm font-bold text-slate-700 mb-2">Number of Loops</label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          id="loopQuantity"
+                          value={loopQuantity}
+                          onChange={(e) => setLoopQuantity(e.target.value)}
+                          className="block w-full px-4 py-3 rounded-lg border border-slate-300 bg-white text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 shadow-sm transition-all font-medium pr-12"
+                          placeholder="e.g. 1"
+                          min="1"
+                          required={isFiberLoop}
+                        />
+                        <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none">
+                          <span className="text-slate-400 font-bold">qty</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : taskType === 'Hand Hole' ? (
                 <div className="animate-in fade-in slide-in-from-top-2 space-y-4">
@@ -432,7 +456,7 @@ export default function LoggingForm() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div>
                   <label htmlFor="footage" className="block text-sm font-bold text-slate-700 mb-2">
-                    {taskType === 'Fiber Loop' ? 'Quantity of Loops' : taskType === 'Hand Hole' || taskType === 'Drop' ? 'Quantity' : 'Total Footage'}
+                    {taskType === 'Hand Hole' || taskType === 'Drop' ? 'Quantity' : 'Total Footage (Mainline)'}
                   </label>
                   <div className="relative rounded-lg shadow-sm">
                     <input
@@ -442,12 +466,12 @@ export default function LoggingForm() {
                       value={footage}
                       onChange={(e) => setFootage(e.target.value)}
                       className="block w-full px-4 py-3 rounded-lg border border-slate-300 bg-white text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 shadow-sm transition-all font-medium pr-12"
-                      placeholder={taskType === 'Fiber Loop' ? 'e.g. 2' : 'e.g. 1500'}
+                      placeholder="e.g. 1500"
                       required={taskType !== 'Drop' && taskType !== 'Hand Hole'}
                     />
                     <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none">
                       <span className="text-slate-400 font-bold">
-                        {taskType === 'Fiber Loop' || taskType === 'Hand Hole' || taskType === 'Drop' ? 'qty' : 'ft'}
+                        {taskType === 'Hand Hole' || taskType === 'Drop' ? 'qty' : 'ft'}
                       </span>
                     </div>
                   </div>
