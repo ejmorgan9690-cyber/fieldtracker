@@ -104,6 +104,7 @@ export default function LoggingForm() {
   const [gpsCoordinates, setGpsCoordinates] = useState('');
   const [dropNumber, setDropNumber] = useState('');
   const [fiberCount, setFiberCount] = useState(FIBER_COUNTS[0]);
+  const [town, setTown] = useState('Shidler');
   const [rdtSection, setRdtSection] = useState('RDT1');
   const [route, setRoute] = useState('Route 1');
   const [location, setLocation] = useState('1');
@@ -166,6 +167,7 @@ export default function LoggingForm() {
     addEntry({
       inspector: authUser.name,
       date,
+      town,
       taskType,
       boreNumber: taskType === 'Bore' ? boreNumber : null,
       fiberCount: taskType === 'Fiber' ? fiberCount : null,
@@ -261,6 +263,19 @@ export default function LoggingForm() {
                 />
               </div>
               
+              {/* Town */}
+              <div>
+                <Combobox 
+                  id="town" 
+                  label="Town / Exchange" 
+                  value={town} 
+                  onChange={setTown} 
+                  options={['Shidler', 'Wynona']} 
+                  required 
+                />
+              </div>
+
+              {/* RDT Section, Route, Location */}
               {taskType !== 'Drop' ? (
                 <>
                   <Combobox 

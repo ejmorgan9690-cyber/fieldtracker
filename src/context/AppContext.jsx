@@ -196,6 +196,7 @@ export const AppProvider = ({ children }) => {
       const initialStatus = entry.taskType === 'Drop' ? 'Accepted' : 'Pending';
 
       const supabasePayload = {
+        town: entry.town || 'Shidler',
         service_date: entry.date,
         section: entry.rdtSection,
         route: entry.route,
@@ -240,6 +241,7 @@ export const AppProvider = ({ children }) => {
         id: row.id,
         inspector: row.inspector_name,
         date: row.service_date,
+        town: row.town || 'Shidler',
         taskType: row.task_type,
         footage: row.footage,
         rdtSection: row.section,

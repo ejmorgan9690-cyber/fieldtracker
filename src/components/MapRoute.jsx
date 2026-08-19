@@ -18,41 +18,52 @@ export default function MapRoute() {
     const segments = [];
     if (!entries || !geoData) return { completedHandholes: completedHH, completedSegments: segments };
     
+    const getTownKey = (exchange) => {
+      if (!exchange) return 'Unknown';
+      const ex = exchange.toLowerCase();
+      if (ex.includes('shid') || ex.includes('tel')) return 'Shidler';
+      if (ex.includes('wyn')) return 'Wynona';
+      return exchange;
+    };
+
     // 1. Build indexes of the GeoJSON data for quick lookup
-    const pointsMap = new Map(); // key: "Csa_Route_Loc", value: Point Feature
-    const linesMap = new Map();  // key: "Csa_Route", value: LineString Feature
+    const pointsMap = new Map(); // key: "Town_Csa_Route_Loc"
+    const linesMap = new Map();  // key: "Town_Csa_Route"
 
     geoData.features.forEach(f => {
       const p = f.properties || {};
+      const town = getTownKey(p.Exchange);
+      
       if (f.geometry && f.geometry.type === 'Point' && p.Csa && p.Rt__no_ && p.Loc__no_) {
-        pointsMap.set(`${p.Csa}_${p.Rt__no_}_${p.Loc__no_}`, f);
+        pointsMap.set(`${town}_${p.Csa}_${p.Rt__no_}_${p.Loc__no_}`, f);
       }
       if (f.geometry && f.geometry.type === 'LineString' && p.CSA && p.Route) {
-        linesMap.set(`${p.CSA}_${p.Route}`, f);
+        linesMap.set(`${town}_${p.CSA}_${p.Route}`, f);
       }
     });
 
     // 2. Process Accepted entries
     entries.forEach(entry => {
       if (entry.status === 'Accepted' && entry.taskType !== 'Drop') {
+        const town = entry.town || 'Shidler'; // Default to Shidler for older logs
         const rdt = entry.rdtSection;
         const route = entry.route ? entry.route.replace('Route ', '') : '';
         const loc = entry.location;
         
         if (rdt && route && loc) {
-          const hhKey = `${rdt}_${route}_${loc}`;
+          const hhKey = `${town}_${rdt}_${route}_${loc}`;
           completedHH.add(hhKey);
 
           // Find the Route Line and the End Point (this location)
-          const routeLine = linesMap.get(`${rdt}_${route}`);
+          const routeLine = linesMap.get(`${town}_${rdt}_${route}`);
           const endPoint = pointsMap.get(hhKey);
           
           if (routeLine && endPoint) {
             // Find the Start Point (previous location, or start of the line if Loc 1)
             let startPoint = null;
             const prevLocStr = String(parseInt(loc, 10) - 1);
-            if (pointsMap.has(`${rdt}_${route}_${prevLocStr}`)) {
-              startPoint = pointsMap.get(`${rdt}_${route}_${prevLocStr}`);
+            if (pointsMap.has(`${town}_${rdt}_${route}_${prevLocStr}`)) {
+              startPoint = pointsMap.get(`${town}_${rdt}_${route}_${prevLocStr}`);
             } else {
               // If no previous handhole, start from the very beginning of the Route Line
               startPoint = turf.point(routeLine.geometry.coordinates[0]);
@@ -61,12 +72,10 @@ export default function MapRoute() {
             try {
               // Slice the line along the actual road curves using Turf!
               const sliced = turf.lineSlice(startPoint, endPoint, routeLine);
-              // Turf returns coordinates as [lng, lat], Leaflet Polyline expects [lat, lng]
               const latLngs = sliced.geometry.coordinates.map(coord => [coord[1], coord[0]]);
               segments.push({ key: hhKey, positions: latLngs });
             } catch (err) {
               console.warn("Could not slice line segment for", hhKey, err);
-              // Fallback to straight line if Turf fails
               const startCoords = startPoint.geometry.coordinates;
               const endCoords = endPoint.geometry.coordinates;
               segments.push({ key: hhKey, positions: [[startCoords[1], startCoords[0]], [endCoords[1], endCoords[0]]] });
@@ -76,7 +85,7 @@ export default function MapRoute() {
       }
     });
     
-    return { completedHandholes: completedHH, completedSegments: segments };
+    return { completedHandholes: completedHH, completedSegments: segments, getTownKey };
   }, [entries, geoData]);
 
   useEffect(() => {
@@ -122,10 +131,11 @@ export default function MapRoute() {
     if (isHandhole) {
       // Check if this specific handhole is completed
       // The KML properties: Csa (e.g. 'RDT1'), Rt__no_ (e.g. '3C'), Loc__no_ (e.g. '1')
+      const town = getTownKey(p.Exchange);
       const csa = p.Csa || '';
       const rt = p.Rt__no_ || '';
       const loc = p.Loc__no_ || '';
-      const isCompleted = completedHandholes.has(`${csa}_${rt}_${loc}`);
+      const isCompleted = completedHandholes.has(`${town}_${csa}_${rt}_${loc}`);
       
       const bgColor = isCompleted ? '#22c55e' : 'black'; // Green if completed, black if pending
       const borderColor = isCompleted ? '#16a34a' : 'white';
