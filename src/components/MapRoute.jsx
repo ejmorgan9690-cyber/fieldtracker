@@ -35,20 +35,58 @@ export default function MapRoute() {
   }, []);
 
   const getStyle = (feature) => {
-    // If the KML has styles converted to GeoJSON properties, apply them
-    const p = feature.properties;
+    // Render lines as red lines as requested
     return {
-      color: p && p.stroke ? p.stroke : '#3b82f6', // Default blue
-      weight: p && p['stroke-width'] ? p['stroke-width'] : 3,
-      opacity: p && p['stroke-opacity'] !== undefined ? p['stroke-opacity'] : 0.8,
-      fillColor: p && p.fill ? p.fill : '#3b82f6',
-      fillOpacity: p && p['fill-opacity'] !== undefined ? p['fill-opacity'] : 0.2
+      color: '#ef4444', // Red line for fiber route
+      weight: 4,
+      opacity: 0.9,
     };
   };
 
+  const pointToLayer = (feature, latlng) => {
+    const p = feature.properties || {};
+    
+    // Check if it is a Handhole (either by Loc__type or if the icon implies a square)
+    const isHandhole = p.Loc__type === 'HH' || (p.name && p.name.match(/^[A-Z0-9]+-[0-9]+$/)) || (p.icon && p.icon.includes('square'));
+    
+    if (isHandhole) {
+      // Create a small black square with the label next to it
+      const html = `
+        <div style="display: flex; align-items: center; transform: translate(-5px, -5px);">
+          <div style="width: 10px; height: 10px; background-color: black; border: 1px solid white; flex-shrink: 0;"></div>
+          <span style="margin-left: 4px; font-size: 11px; font-weight: 900; color: black; text-shadow: 1px 1px 0 #fff, -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff; white-space: nowrap;">
+            ${p.name || ''}
+          </span>
+        </div>
+      `;
+      
+      return L.marker(latlng, {
+        icon: L.divIcon({
+          className: 'custom-hh-icon',
+          html: html,
+          iconSize: [0, 0], // The CSS handles the layout
+          iconAnchor: [0, 0]
+        })
+      });
+    } else {
+      // Other generic points (make them small circle markers so they don't block the screen)
+      return L.circleMarker(latlng, {
+        radius: 4,
+        fillColor: p['icon-color'] || '#3b82f6',
+        color: '#ffffff',
+        weight: 1,
+        fillOpacity: 0.8
+      });
+    }
+  };
+
   const onEachFeature = (feature, layer) => {
-    if (feature.properties && feature.properties.name) {
-      layer.bindPopup(`<strong>${feature.properties.name}</strong><br/>${feature.properties.description || ''}`);
+    if (feature.properties) {
+      const p = feature.properties;
+      let popupContent = `<strong>${p.name || 'Feature'}</strong>`;
+      if (p.Loc__type) popupContent += `<br/>Type: ${p.Loc__type}`;
+      if (p.descriptio) popupContent += `<br/>${p.descriptio}`;
+      layer.bindPopup(popupContent);
     }
   };
 
@@ -111,7 +149,7 @@ export default function MapRoute() {
           />
           {geoData && (
             <>
-              <GeoJSON data={geoData} style={getStyle} onEachFeature={onEachFeature} />
+              <GeoJSON data={geoData} style={getStyle} onEachFeature={onEachFeature} pointToLayer={pointToLayer} />
               <FitBounds data={geoData} />
             </>
           )}
