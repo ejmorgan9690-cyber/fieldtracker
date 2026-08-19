@@ -17,14 +17,16 @@ export default function Navigation() {
               <span className="ml-3 text-xs font-bold text-indigo-600 bg-indigo-100 px-2 py-1 rounded-full">v1.0.1</span>
             </div>
             
-            {/* Mobile Logout (shows on mobile) */}
-            <div className="flex items-center sm:hidden">
+            {/* Mobile User Profile & Logout (shows on mobile) */}
+            <div className="flex items-center sm:hidden bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 shadow-sm">
+              <span className="text-xs font-bold text-slate-700 mr-3">{authUser?.name} <span className="text-indigo-600">({authUser?.role})</span></span>
               <button
                 onClick={logout}
-                className="p-2 text-slate-500 hover:text-red-600 transition-colors"
+                className="p-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-md transition-colors flex items-center border border-red-100 shadow-sm"
                 title="Logout"
               >
-                <LogOut className="h-6 w-6" />
+                <LogOut className="h-4 w-4 mr-1" />
+                <span className="text-xs font-bold">Logout</span>
               </button>
             </div>
           </div>
