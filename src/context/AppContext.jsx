@@ -67,12 +67,17 @@ export const AppProvider = ({ children }) => {
     const savedRedlines = localStorage.getItem('fieldTrackerRedlines');
     if (savedRedlines) setRedlines(JSON.parse(savedRedlines));
     
-    // Check both local and session storage for active session
     const savedUser = localStorage.getItem('fieldTrackerAuth') || sessionStorage.getItem('fieldTrackerAuth');
-    if (savedUser) {
-      const parsedUser = JSON.parse(savedUser);
-      setAuthUser(parsedUser);
-      setActiveTab(parsedUser.role === 'Resident' ? 'dashboard' : 'log');
+    if (savedUser && savedUser !== 'undefined') {
+      try {
+        const parsedUser = JSON.parse(savedUser);
+        setAuthUser(parsedUser);
+        setActiveTab(parsedUser.role === 'Resident' ? 'dashboard' : 'log');
+      } catch (e) {
+        console.error('Failed to parse saved auth:', e);
+        localStorage.removeItem('fieldTrackerAuth');
+        sessionStorage.removeItem('fieldTrackerAuth');
+      }
     }
   }, []);
 
@@ -245,7 +250,7 @@ export const AppProvider = ({ children }) => {
 
   return (
     <AppContext.Provider value={{ 
-      users, authUser, login, logout, register,
+      authUser, login, logout, register,
       entries, addEntry, deleteEntry, 
       dailies, addDaily, deleteDaily,
       gigs, addGig, deleteGig,
