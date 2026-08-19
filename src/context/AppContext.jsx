@@ -53,21 +53,29 @@ export const AppProvider = ({ children }) => {
         console.error('Unexpected error fetching from Supabase:', err);
       }
       
-      // Fallback to local storage if Supabase fails
-      const savedEntries = localStorage.getItem('fieldTrackerEntries');
-      if (savedEntries) setEntries(JSON.parse(savedEntries));
+      try {
+        const savedEntries = localStorage.getItem('fieldTrackerEntries');
+        if (savedEntries && savedEntries !== 'undefined') setEntries(JSON.parse(savedEntries));
+      } catch (e) {
+        console.error('Failed to parse saved entries:', e);
+      }
     };
 
     fetchEntries();
-
-    const savedDailies = localStorage.getItem('fieldTrackerDailies');
-    if (savedDailies) setDailies(JSON.parse(savedDailies));
-
-    const savedGigs = localStorage.getItem('fieldTrackerGigs');
-    if (savedGigs) setGigs(JSON.parse(savedGigs));
     
-    const savedRedlines = localStorage.getItem('fieldTrackerRedlines');
-    if (savedRedlines) setRedlines(JSON.parse(savedRedlines));
+    // Always load other offline data
+    try {
+      const savedDailies = localStorage.getItem('fieldTrackerDailies');
+      if (savedDailies && savedDailies !== 'undefined') setDailies(JSON.parse(savedDailies));
+
+      const savedGigs = localStorage.getItem('fieldTrackerGigs');
+      if (savedGigs && savedGigs !== 'undefined') setGigs(JSON.parse(savedGigs));
+
+      const savedRedlines = localStorage.getItem('fieldTrackerRedlines');
+      if (savedRedlines && savedRedlines !== 'undefined') setRedlines(JSON.parse(savedRedlines));
+    } catch (e) {
+      console.error('Failed to parse saved local data:', e);
+    }
     
     const savedUser = localStorage.getItem('fieldTrackerAuth') || sessionStorage.getItem('fieldTrackerAuth');
     if (savedUser && savedUser !== 'undefined') {
