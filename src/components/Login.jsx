@@ -83,7 +83,7 @@ export default function Login() {
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10">
         <div className="flex justify-center">
-          <img src="/mrl-logo.png" alt="MRL Logo" className="h-20 object-contain drop-shadow-md" />
+          <img src="/mrl-logo.png" alt="MRL Logo" className="h-24 object-contain mix-blend-multiply" />
         </div>
         <h2 className="mt-6 text-center text-3xl font-extrabold text-slate-900 tracking-tight">
           Field Tracker
