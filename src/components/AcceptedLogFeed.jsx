@@ -67,31 +67,34 @@ export default function AcceptedLogFeed() {
                         <span className="px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full bg-green-100 text-green-800 border border-green-200 mb-2">
                           VERIFIED
                         </span>
-                        <h3 className="text-lg font-bold text-indigo-700">{log.psNumber}</h3>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-bold text-slate-900">{formatDate(log.date)}</p>
-                        <p className="text-xs text-slate-500">{log.inspector}</p>
                       </div>
                     </div>
                     
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                       <div>
-                        <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Task</p>
-                        <p className="font-semibold text-slate-900">
+                        <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Inspector</p>
+                        <p className="font-semibold text-slate-900">{log.inspector}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Date</p>
+                        <p className="font-semibold text-slate-900">{formatDate(log.date)}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">P/S</p>
+                        <p className="text-lg font-bold text-indigo-700">{log.psNumber}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Hierarchy</p>
+                        <p className="text-sm font-medium text-slate-700">{log.rdtSection} &gt; {log.route} &gt; {log.location}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Task / Quantity</p>
+                        <p className="font-semibold text-slate-900 text-lg">
                           {log.taskType} 
                           {log.unitCode ? ` - ${log.unitCode}` : ''}
+                          {' - '}
+                          {log.footage} <span className="text-sm font-medium text-slate-500">{log.taskType === 'Hand Hole' || (log.unitCode && log.unitCode.includes('LOOP')) ? 'qty' : 'ft'}</span>
                         </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Quantity</p>
-                        <p className="font-bold text-slate-900 text-lg">
-                          {log.footage} <span className="text-sm font-medium text-slate-500">{log.taskType === 'Hand Hole' ? 'qty' : 'ft'}</span>
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Location</p>
-                        <p className="text-sm font-medium text-slate-700">{log.rdtSection} &gt; {log.route} &gt; {log.location}</p>
                       </div>
                       
                       {log.isAddedBore && (

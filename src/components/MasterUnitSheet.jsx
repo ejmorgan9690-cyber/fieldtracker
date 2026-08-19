@@ -32,8 +32,8 @@ export default function MasterUnitSheet() {
         };
       }
       
-      if (entry.taskType === 'Hand Hole') {
-        grouped[code].totalQty += 1; // 1 handhole
+      if (entry.taskType === 'Hand Hole' || (entry.unitCode && entry.unitCode.includes('LOOP'))) {
+        grouped[code].totalQty += Number(entry.footage) || 1; // For handholes, they might enter 1 as qty. For loops, they enter quantity.
       } else {
         grouped[code].totalFootage += Number(entry.footage) || 0;
       }

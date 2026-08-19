@@ -102,10 +102,6 @@ export default function PendingReview() {
                   
                   <div className="space-y-4">
                     <div>
-                      <p className="text-xs text-slate-500 font-medium">PS Number</p>
-                      <p className="text-lg font-bold text-indigo-700">{selectedEntry.psNumber}</p>
-                    </div>
-                    <div>
                       <p className="text-xs text-slate-500 font-medium">Inspector</p>
                       <p className="font-semibold text-slate-900">{selectedEntry.inspector}</p>
                     </div>
@@ -114,14 +110,21 @@ export default function PendingReview() {
                       <p className="font-semibold text-slate-900">{formatDate(selectedEntry.date)}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-slate-500 font-medium">Task / Quantity</p>
-                      <p className="font-semibold text-slate-900">
-                        {selectedEntry.taskType} - {selectedEntry.footage} {selectedEntry.taskType === 'Drop' || selectedEntry.taskType === 'Hand Hole' ? 'qty' : 'ft'}
-                      </p>
+                      <p className="text-xs text-slate-500 font-medium">P/S</p>
+                      <p className="text-lg font-bold text-indigo-700">{selectedEntry.psNumber}</p>
                     </div>
                     <div>
                       <p className="text-xs text-slate-500 font-medium">Hierarchy</p>
                       <p className="font-semibold text-slate-900">{selectedEntry.rdtSection} &gt; {selectedEntry.route} &gt; {selectedEntry.location}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-500 font-medium">Task / Quantity</p>
+                      <p className="font-semibold text-slate-900">
+                        {selectedEntry.taskType} 
+                        {selectedEntry.unitCode ? ` - ${selectedEntry.unitCode}` : ''} 
+                        {' - '} 
+                        {selectedEntry.footage} {selectedEntry.taskType === 'Drop' || selectedEntry.taskType === 'Hand Hole' || (selectedEntry.unitCode && selectedEntry.unitCode.includes('LOOP')) ? 'qty' : 'ft'}
+                      </p>
                     </div>
                     {selectedEntry.isAddedBore && (
                       <div className="bg-orange-100 border border-orange-200 p-3 rounded-lg mt-4">

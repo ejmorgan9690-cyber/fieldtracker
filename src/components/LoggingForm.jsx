@@ -272,14 +272,14 @@ export default function LoggingForm() {
               
               {taskType !== 'Drop' && (
                 <div>
-                  <label htmlFor="psNumber" className="block text-sm font-bold text-slate-700 mb-2">PS (Pay Sheet) Number</label>
+                  <label htmlFor="psNumber" className="block text-sm font-bold text-slate-700 mb-2">P/S</label>
                   <input
                     type="text"
                     id="psNumber"
                     value={psNumber}
                     onChange={(e) => setPsNumber(e.target.value)}
                     className="block w-full px-4 py-3 rounded-lg border border-slate-300 bg-white text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 shadow-sm transition-all font-medium"
-                    placeholder="e.g. PS-101"
+                    placeholder="e.g. 101"
                     required={taskType !== 'Drop'}
                   />
                 </div>
@@ -363,13 +363,6 @@ export default function LoggingForm() {
                       Storage Loop in Handhole (adds LOOP to Unit Code)
                     </label>
                   </div>
-                  <Combobox 
-                    id="fiberCount" 
-                    label="Fiber Count Label (Optional)" 
-                    value={fiberCount} 
-                    onChange={setFiberCount} 
-                    options={FIBER_COUNTS} 
-                  />
                 </div>
               ) : taskType === 'Hand Hole' ? (
                 <div className="animate-in fade-in slide-in-from-top-2 space-y-4">
