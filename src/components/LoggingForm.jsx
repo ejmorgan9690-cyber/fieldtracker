@@ -104,6 +104,12 @@ export default function LoggingForm() {
   const [location, setLocation] = useState('1');
   const [footage, setFootage] = useState('');
   
+  // Unit Code State
+  const [unitCode, setUnitCode] = useState('');
+  const [isFiberLoop, setIsFiberLoop] = useState(false);
+  const [hasGroundRod, setHasGroundRod] = useState(false);
+  const [hasSign, setHasSign] = useState(false);
+  
   const [successMsg, setSuccessMsg] = useState(false);
 
   const locationOptions = useMemo(() => {
@@ -118,6 +124,13 @@ export default function LoggingForm() {
       setLocation(locationOptions[0] || '1');
     }
   }, [rdtSection, locationOptions, taskType]);
+
+  useEffect(() => {
+    setUnitCode('');
+    setIsFiberLoop(false);
+    setHasGroundRod(false);
+    setHasSign(false);
+  }, [taskType]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -141,7 +154,10 @@ export default function LoggingForm() {
       footage: taskType === 'Drop' || taskType === 'Hand Hole' ? 1 : Number(footage),
       isAddedBore: taskType === 'Bore' ? isAddedBore : false,
       gpsCoordinates: taskType === 'Bore' && isAddedBore ? gpsCoordinates : null,
-      psNumber: psNumber
+      psNumber: taskType === 'Drop' ? '' : psNumber,
+      unitCode: taskType === 'Fiber' && isFiberLoop ? `${unitCode} LOOP` : unitCode,
+      hasGroundRod: taskType === 'Hand Hole' ? hasGroundRod : false,
+      hasSign: taskType === 'Hand Hole' ? hasSign : false
     });
 
     if (taskType !== 'Drop' && taskType !== 'Hand Hole') setFootage('');
@@ -254,21 +270,31 @@ export default function LoggingForm() {
                 required 
               />
               
-              <div>
-                <label htmlFor="psNumber" className="block text-sm font-bold text-slate-700 mb-2">PS (Pay Sheet) Number</label>
-                <input
-                  type="text"
-                  id="psNumber"
-                  value={psNumber}
-                  onChange={(e) => setPsNumber(e.target.value)}
-                  className="block w-full px-4 py-3 rounded-lg border border-slate-300 bg-white text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 shadow-sm transition-all font-medium"
-                  placeholder="e.g. PS-101"
-                  required
-                />
-              </div>
+              {taskType !== 'Drop' && (
+                <div>
+                  <label htmlFor="psNumber" className="block text-sm font-bold text-slate-700 mb-2">PS (Pay Sheet) Number</label>
+                  <input
+                    type="text"
+                    id="psNumber"
+                    value={psNumber}
+                    onChange={(e) => setPsNumber(e.target.value)}
+                    className="block w-full px-4 py-3 rounded-lg border border-slate-300 bg-white text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 shadow-sm transition-all font-medium"
+                    placeholder="e.g. PS-101"
+                    required={taskType !== 'Drop'}
+                  />
+                </div>
+              )}
 
               {taskType === 'Bore' ? (
                 <div className="animate-in fade-in slide-in-from-top-2 space-y-4">
+                  <Combobox 
+                    id="unitCode" 
+                    label="Unit Code (Bore)" 
+                    value={unitCode} 
+                    onChange={setUnitCode} 
+                    options={['BM61D (Dirt)', 'BM61R (Rock)'].map(o => o.split(' ')[0])} 
+                    required 
+                  />
                   <Combobox 
                     id="boreNumber" 
                     label="Bore Number" 
@@ -304,16 +330,83 @@ export default function LoggingForm() {
                     </div>
                   )}
                 </div>
-              ) : taskType === 'Fiber' ? (
+              ) : taskType === 'Plow' || taskType === 'Trench' ? (
                 <div className="animate-in fade-in slide-in-from-top-2">
                   <Combobox 
+                    id="unitCode" 
+                    label={`Unit Code (${taskType})`} 
+                    value={unitCode} 
+                    onChange={setUnitCode} 
+                    options={['BFOV (1.25)(1)', 'BFOV (1.25)(2)', 'BFOV (1.25)(3)', 'BFOV (1.25)(4)']} 
+                    required 
+                  />
+                </div>
+              ) : taskType === 'Fiber' ? (
+                <div className="animate-in fade-in slide-in-from-top-2 space-y-4">
+                  <Combobox 
+                    id="unitCode" 
+                    label="Unit Code (Fiber)" 
+                    value={unitCode} 
+                    onChange={setUnitCode} 
+                    options={['BFO 24I', 'BFO 48I', 'BFO 72I', 'BFO 96I']} 
+                    required 
+                  />
+                  <div className="flex items-center pt-2">
+                    <input
+                      id="isFiberLoop"
+                      type="checkbox"
+                      checked={isFiberLoop}
+                      onChange={(e) => setIsFiberLoop(e.target.checked)}
+                      className="h-5 w-5 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"
+                    />
+                    <label htmlFor="isFiberLoop" className="ml-2 text-sm font-bold text-slate-700">
+                      Storage Loop in Handhole (adds LOOP to Unit Code)
+                    </label>
+                  </div>
+                  <Combobox 
                     id="fiberCount" 
-                    label="Fiber Count" 
+                    label="Fiber Count Label (Optional)" 
                     value={fiberCount} 
                     onChange={setFiberCount} 
                     options={FIBER_COUNTS} 
+                  />
+                </div>
+              ) : taskType === 'Hand Hole' ? (
+                <div className="animate-in fade-in slide-in-from-top-2 space-y-4">
+                  <Combobox 
+                    id="unitCode" 
+                    label="Unit Code (Hand Hole Size)" 
+                    value={unitCode} 
+                    onChange={setUnitCode} 
+                    options={['BHF (24x36x30)', 'BHF (30x48x36)']} 
                     required 
                   />
+                  <div className="flex flex-col space-y-3 pt-2">
+                    <div className="flex items-center">
+                      <input
+                        id="hasGroundRod"
+                        type="checkbox"
+                        checked={hasGroundRod}
+                        onChange={(e) => setHasGroundRod(e.target.checked)}
+                        className="h-5 w-5 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"
+                      />
+                      <label htmlFor="hasGroundRod" className="ml-2 text-sm font-bold text-slate-700">
+                        Include Ground Rod (BM 2)
+                      </label>
+                    </div>
+                    <div className="flex items-center">
+                      <input
+                        id="hasSign"
+                        type="checkbox"
+                        checked={hasSign}
+                        onChange={(e) => setHasSign(e.target.checked)}
+                        className="h-5 w-5 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"
+                      />
+                      <label htmlFor="hasSign" className="ml-2 text-sm font-bold text-slate-700">
+                        Include Sign (BM 53)
+                      </label>
+                    </div>
+                  </div>
                 </div>
               ) : taskType === 'Drop' ? (
                 <div className="animate-in fade-in slide-in-from-top-2">

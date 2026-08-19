@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAppContext } from '../context/AppContext';
-import { HardHat, LogOut, UserCircle, Activity, FileText, CalendarDays, ClipboardList, Map, Target } from 'lucide-react';
+import { HardHat, LogOut, UserCircle, Activity, FileText, CalendarDays, ClipboardList, Map, Target, Calculator, CheckCircle } from 'lucide-react';
 
 export default function Navigation() {
   const { authUser, activeTab, setActiveTab, logout } = useAppContext();
@@ -131,6 +131,17 @@ export default function Navigation() {
                       Pending Review
                     </button>
                     <button
+                      onClick={() => setActiveTab('accepted_logs')}
+                      className={`flex-1 sm:flex-none flex items-center px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-all duration-200 ${
+                        activeTab === 'accepted_logs'
+                          ? 'bg-indigo-600 text-white shadow-md ring-2 ring-indigo-600 ring-offset-2'
+                          : 'text-slate-600 hover:bg-slate-200 hover:text-slate-900'
+                      }`}
+                    >
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Accepted Logs
+                    </button>
+                    <button
                       onClick={() => setActiveTab('dashboard')}
                       className={`flex-1 sm:flex-none flex items-center px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-all duration-200 ${
                         activeTab === 'dashboard'
@@ -138,8 +149,8 @@ export default function Navigation() {
                           : 'text-slate-600 hover:bg-slate-200 hover:text-slate-900'
                       }`}
                     >
-                      <Activity className="w-4 h-4 mr-2" />
-                      Production Master
+                      <Calculator className="w-4 h-4 mr-2" />
+                      Unit Pay Sheet
                     </button>
                     <button
                       onClick={() => setActiveTab('master_dailies')}

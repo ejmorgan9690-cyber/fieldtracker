@@ -13,6 +13,8 @@ import RedlinesForm from './components/RedlinesForm';
 import MasterRedlines from './components/MasterRedlines';
 import MasterDrops from './components/MasterDrops';
 import PendingReview from './components/PendingReview';
+import AcceptedLogFeed from './components/AcceptedLogFeed';
+import MasterUnitSheet from './components/MasterUnitSheet';
 
 const MainContent = () => {
   const { authUser, activeTab } = useAppContext();
@@ -31,7 +33,8 @@ const MainContent = () => {
         {authUser.role === 'Inspector' && activeTab === 'history' && <MyHistory />}
         {authUser.role === 'Inspector' && activeTab === 'gig_list' && <GigList />}
         {authUser.role === 'Resident' && activeTab === 'pending_review' && <PendingReview />}
-        {authUser.role === 'Resident' && activeTab === 'dashboard' && <MasterDashboard />}
+        {authUser.role === 'Resident' && activeTab === 'dashboard' && <MasterUnitSheet />}
+        {authUser.role === 'Resident' && activeTab === 'accepted_logs' && <AcceptedLogFeed />}
         {authUser.role === 'Resident' && activeTab === 'master_dailies' && <MasterDailies />}
         {authUser.role === 'Resident' && activeTab === 'master_redlines' && <MasterRedlines />}
         {authUser.role === 'Resident' && activeTab === 'master_gig_list' && <MasterGigList />}

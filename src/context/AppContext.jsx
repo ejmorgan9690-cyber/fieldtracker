@@ -45,7 +45,10 @@ export const AppProvider = ({ children }) => {
             isAddedBore: row.is_added_bore || false,
             gpsCoordinates: row.gps_coordinates || null,
             psNumber: row.ps_number || '',
-            status: row.status || 'Pending'
+            status: row.status || 'Pending',
+            unitCode: row.unit_code || '',
+            hasGroundRod: row.has_ground_rod || false,
+            hasSign: row.has_sign || false
           }));
           setEntries(mappedEntries);
           localStorage.setItem('fieldTrackerEntries', JSON.stringify(mappedEntries));
@@ -190,6 +193,8 @@ export const AppProvider = ({ children }) => {
                          entry.taskType === 'Hand Hole' ? entry.handHoleNumber :
                          entry.taskType === 'Drop' ? entry.dropNumber : null;
 
+      const initialStatus = entry.taskType === 'Drop' ? 'Accepted' : 'Pending';
+
       const supabasePayload = {
         service_date: entry.date,
         section: entry.rdtSection,
@@ -202,7 +207,10 @@ export const AppProvider = ({ children }) => {
         is_added_bore: entry.isAddedBore || false,
         gps_coordinates: entry.gpsCoordinates || null,
         ps_number: entry.psNumber,
-        status: 'Pending'
+        status: initialStatus,
+        unit_code: entry.unitCode || '',
+        has_ground_rod: entry.hasGroundRod || false,
+        has_sign: entry.hasSign || false
       };
 
       const { data, error } = await supabase
@@ -214,13 +222,14 @@ export const AppProvider = ({ children }) => {
         console.error('Error saving to Supabase:', error);
       }
 
-      const newEntry = { ...entry, id: data && data.length > 0 ? data[0].id : Date.now().toString(), status: 'Pending' };
+      const newEntry = { ...entry, id: data && data.length > 0 ? data[0].id : Date.now().toString(), status: initialStatus };
       const newEntries = [...entries, newEntry];
       setEntries(newEntries);
       localStorage.setItem('fieldTrackerEntries', JSON.stringify(newEntries));
     } catch (err) {
       console.error('Unexpected error saving to Supabase:', err);
-      const newEntries = [...entries, { ...entry, id: Date.now().toString(), status: 'Pending' }];
+      const initialStatus = entry.taskType === 'Drop' ? 'Accepted' : 'Pending';
+      const newEntries = [...entries, { ...entry, id: Date.now().toString(), status: initialStatus }];
       setEntries(newEntries);
       localStorage.setItem('fieldTrackerEntries', JSON.stringify(newEntries));
     }

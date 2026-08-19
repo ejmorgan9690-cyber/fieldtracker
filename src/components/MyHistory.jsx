@@ -86,33 +86,44 @@ export default function MyHistory() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-slate-100">
-                  {myEntries.map((row, idx) => (
-                    <tr key={idx} className={`hover:bg-indigo-50/80 transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}`}>
-                      <td className="px-8 py-4 whitespace-nowrap text-sm font-medium text-slate-900">{formatDate(row.date)}</td>
-                      <td className="px-8 py-4 whitespace-nowrap text-sm text-slate-700">
-                        {row.rdtSection} &gt; {row.route} &gt; {row.location}
-                      </td>
-                      <td className="px-8 py-4 whitespace-nowrap text-sm text-slate-700">
-                        <span className={`px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full 
-                          ${row.taskType === 'Bore' ? 'bg-orange-100 text-orange-800 border border-orange-200' : 
-                            row.taskType === 'Fiber' ? 'bg-indigo-100 text-indigo-800 border border-indigo-200' : 
-                            row.taskType === 'Drop' ? 'bg-pink-100 text-pink-800 border border-pink-200' :
-                            'bg-green-100 text-green-800 border border-green-200'}`}>
-                          {row.taskType} 
-                          {row.boreNumber && !row.isAddedBore ? ` (#${row.boreNumber})` : ''}
-                          {row.isAddedBore ? ` (Added Bore)` : ''}
-                          {row.fiberCount ? ` (${row.fiberCount})` : ''}
-                          {row.handHoleNumber !== '' && row.handHoleNumber != null ? ` (#${row.handHoleNumber})` : ''}
-                          {row.dropNumber ? ` (${row.dropNumber})` : ''}
-                        </span>
-                        {row.gpsCoordinates && (
-                          <div className="mt-1 text-xs text-slate-500 font-medium">
-                            GPS: {row.gpsCoordinates}
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-8 py-4 whitespace-nowrap text-sm text-right font-bold text-slate-900">
-                        {row.footage.toLocaleString()} <span className="text-slate-500 font-medium">{row.taskType === 'Hand Hole' || row.taskType === 'Drop' ? 'qty' : 'ft'}</span>
+                  {myEntries.map((row, idx) => {
+                    const isAccepted = row.status === 'Accepted' && row.taskType !== 'Drop';
+                    return (
+                      <tr key={idx} className={`transition-colors ${isAccepted ? 'bg-red-50 hover:bg-red-100' : idx % 2 === 0 ? 'bg-white hover:bg-indigo-50/80' : 'bg-slate-50/50 hover:bg-indigo-50/80'}`}>
+                        <td className="px-8 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
+                          {formatDate(row.date)}
+                          {isAccepted && <span className="ml-2 px-2 py-0.5 text-[10px] font-bold bg-red-100 text-red-700 rounded-full border border-red-200">ACCEPTED</span>}
+                        </td>
+                        <td className="px-8 py-4 whitespace-nowrap text-sm text-slate-700">
+                          {row.rdtSection} &gt; {row.route} &gt; {row.location}
+                        </td>
+                        <td className="px-8 py-4 whitespace-nowrap text-sm text-slate-700">
+                          <span className={`px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full 
+                            ${row.taskType === 'Bore' ? 'bg-orange-100 text-orange-800 border border-orange-200' : 
+                              row.taskType === 'Fiber' ? 'bg-indigo-100 text-indigo-800 border border-indigo-200' : 
+                              row.taskType === 'Drop' ? 'bg-pink-100 text-pink-800 border border-pink-200' :
+                              'bg-green-100 text-green-800 border border-green-200'}`}>
+                            {row.taskType} 
+                            {row.boreNumber && !row.isAddedBore ? ` (#${row.boreNumber})` : ''}
+                            {row.isAddedBore ? ` (Added Bore)` : ''}
+                            {row.fiberCount ? ` (${row.fiberCount})` : ''}
+                            {row.handHoleNumber !== '' && row.handHoleNumber != null ? ` (#${row.handHoleNumber})` : ''}
+                            {row.dropNumber ? ` (${row.dropNumber})` : ''}
+                          </span>
+                          {(row.unitCode || row.psNumber) && (
+                            <div className="mt-1 text-xs text-slate-500 font-bold">
+                              {row.unitCode && <span>Unit: {row.unitCode} </span>}
+                              {row.psNumber && <span>{row.unitCode && '| '}PS: {row.psNumber}</span>}
+                            </div>
+                          )}
+                          {row.gpsCoordinates && (
+                            <div className="mt-1 text-xs text-slate-500 font-medium">
+                              GPS: {row.gpsCoordinates}
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-8 py-4 whitespace-nowrap text-sm text-right font-bold text-slate-900">
+                          {row.footage.toLocaleString()} <span className="text-slate-500 font-medium">{row.taskType === 'Hand Hole' || row.taskType === 'Drop' ? 'qty' : 'ft'}</span>
                       </td>
                       <td className="px-8 py-4 whitespace-nowrap text-center">
                         <button
@@ -128,7 +139,8 @@ export default function MyHistory() {
                         </button>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             ) : (
