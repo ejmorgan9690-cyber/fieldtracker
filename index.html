@@ -7,6 +7,14 @@
     <title>field-tracker</title>
   </head>
   <body>
+    <script>
+      window.addEventListener('error', function(e) {
+        document.body.innerHTML = '<div style="color:red;padding:20px;font-family:sans-serif;"><b>Global Error:</b> ' + e.message + '<br><br>Please screenshot this and send it to the developer.</div>';
+      });
+      window.addEventListener('unhandledrejection', function(e) {
+        document.body.innerHTML = '<div style="color:red;padding:20px;font-family:sans-serif;"><b>Promise Error:</b> ' + e.reason + '<br><br>Please screenshot this and send it to the developer.</div>';
+      });
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
