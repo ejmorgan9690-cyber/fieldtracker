@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useAppContext } from '../context/AppContext';
-import { Save, CheckCircle, FileSignature, Calendar, User, Upload, Image as ImageIcon, X } from 'lucide-react';
+import { Save, CheckCircle, FileSignature, Calendar, User, Upload, Image as ImageIcon, X, MapPin, AlertTriangle } from 'lucide-react';
 
 const RDT_SECTIONS = [...Array.from({ length: 10 }, (_, i) => `RDT${i + 1}`), 'Toll N', 'Toll S'];
 const ROUTES = Array.from({ length: 50 }, (_, i) => String(i + 1));
@@ -126,6 +126,51 @@ export default function LoggingForm() {
   const [loopQuantity, setLoopQuantity] = useState('');
   const [hasGroundRod, setHasGroundRod] = useState(false);
   const [hasSign, setHasSign] = useState(false);
+  const [isLocating, setIsLocating] = useState(false);
+
+  const duplicateBoreNumber = useMemo(() => {
+    if (taskType !== 'Bore' || isAddedBore || !boreNumber || !route || !location || !town || !rdtSection || !entries) return null;
+    
+    const existing = entries.find(e => 
+      e.taskType === 'Bore' && 
+      !e.isAddedBore && 
+      e.town === town && 
+      e.rdtSection === rdtSection && 
+      e.route === route && 
+      e.location === location && 
+      String(e.boreNumber) === String(boreNumber)
+    );
+
+    if (existing) {
+      const allBoresForLocation = entries.filter(e => 
+        e.taskType === 'Bore' && 
+        !e.isAddedBore && 
+        e.town === town && 
+        e.rdtSection === rdtSection && 
+        e.route === route && 
+        e.location === location
+      ).map(e => parseInt(e.boreNumber)).filter(n => !isNaN(n));
+      
+      const nextBore = allBoresForLocation.length > 0 ? Math.max(...allBoresForLocation) + 1 : 1;
+      return { existingInspector: existing.inspector, nextBore: String(nextBore) };
+    }
+    return null;
+  }, [entries, taskType, isAddedBore, town, rdtSection, route, location, boreNumber]);
+
+  const handleGetLocation = () => {
+    if (!navigator.geolocation) {
+      alert('Geolocation is not supported by your browser');
+      return;
+    }
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition((position) => {
+      setGpsCoordinates(`${position.coords.latitude.toFixed(6)}, ${position.coords.longitude.toFixed(6)}`);
+      setIsLocating(false);
+    }, () => {
+      alert('Unable to retrieve your location. Please check your device permissions.');
+      setIsLocating(false);
+    }, { enableHighAccuracy: true });
+  };
   
   // Redline Image State
   const [imagePreview, setImagePreview] = useState(null);
@@ -193,7 +238,7 @@ export default function LoggingForm() {
       location: taskType === 'Drop' ? '-' : location,
       footage: taskType === 'Drop' || taskType === 'Hand Hole' ? 1 : Number(footage),
       isAddedBore: taskType === 'Bore' ? isAddedBore : false,
-      gpsCoordinates: taskType === 'Bore' && isAddedBore ? gpsCoordinates : null,
+      gpsCoordinates: gpsCoordinates || null,
       psNumber: taskType === 'Drop' ? '' : psNumber,
       unitCode: unitCode,
       hasGroundRod,
@@ -330,6 +375,41 @@ export default function LoggingForm() {
                   Mainline hierarchy bypassed for Drops.
                 </div>
               )}
+
+              {/* Universal GPS Coordinates */}
+              <div className="col-span-1 sm:col-span-2 lg:col-span-3 mt-2 border-t border-slate-100 pt-5">
+                <div className="flex flex-col sm:flex-row gap-4 items-end">
+                  <div className="flex-grow w-full">
+                    <label htmlFor="gpsCoordinates" className="block text-sm font-bold text-slate-700 mb-2">GPS Coordinates <span className="text-slate-400 font-normal ml-1">(Optional)</span></label>
+                    <input
+                      type="text"
+                      id="gpsCoordinates"
+                      value={gpsCoordinates}
+                      onChange={(e) => setGpsCoordinates(e.target.value)}
+                      className="block w-full px-4 py-3 rounded-lg border border-slate-300 bg-white text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 shadow-sm transition-all font-medium"
+                      placeholder="e.g. 36.421, -96.213"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleGetLocation}
+                    disabled={isLocating}
+                    className="w-full sm:w-auto px-6 py-3 h-[50px] bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-lg shadow-sm focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center whitespace-nowrap border border-indigo-200"
+                  >
+                    {isLocating ? (
+                      <>
+                        <span className="animate-spin mr-2 border-2 border-indigo-500 border-t-transparent rounded-full h-4 w-4"></span>
+                        Locating...
+                      </>
+                    ) : (
+                      <>
+                        <MapPin className="h-5 w-5 mr-2" />
+                        Get Current Location
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -371,14 +451,38 @@ export default function LoggingForm() {
                     options={['BM61D (Dirt)', 'BM61R (Rock)'].map(o => o.split(' ')[0])} 
                     required 
                   />
-                  <Combobox 
-                    id="boreNumber" 
-                    label="Bore Number" 
-                    value={boreNumber} 
-                    onChange={setBoreNumber} 
-                    options={BORE_NUMBERS} 
-                    required={!isAddedBore} 
-                  />
+                  <div className="flex flex-col gap-2">
+                    <Combobox 
+                      id="boreNumber" 
+                      label="Bore Number" 
+                      value={boreNumber} 
+                      onChange={setBoreNumber} 
+                      options={BORE_NUMBERS} 
+                      required={!isAddedBore} 
+                    />
+                    {duplicateBoreNumber && (
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-3 mt-1 animate-in fade-in slide-in-from-top-1">
+                        <div className="flex items-start">
+                          <AlertTriangle className="h-5 w-5 text-red-500 mr-2 mt-0.5 shrink-0" />
+                          <div>
+                            <p className="text-xs font-bold text-red-800 mb-1">
+                              Duplicate Bore Detected
+                            </p>
+                            <p className="text-xs text-red-600 mb-2">
+                              Bore #{boreNumber} was already logged here by {duplicateBoreNumber.existingInspector || 'someone'}.
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => setBoreNumber(duplicateBoreNumber.nextBore)}
+                              className="text-xs bg-red-100 hover:bg-red-200 text-red-700 font-bold py-1 px-3 rounded shadow-sm transition-colors border border-red-200"
+                            >
+                              Auto-Correct to #{duplicateBoreNumber.nextBore}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                   <div className="flex items-center pt-2">
                     <input
                       id="isAddedBore"
@@ -391,20 +495,6 @@ export default function LoggingForm() {
                       Added Bore (Not on Prints)
                     </label>
                   </div>
-                  {isAddedBore && (
-                    <div className="animate-in fade-in slide-in-from-top-2">
-                      <label htmlFor="gpsCoordinates" className="block text-sm font-bold text-slate-700 mb-2">GPS Coordinates (Start)</label>
-                      <input
-                        type="text"
-                        id="gpsCoordinates"
-                        value={gpsCoordinates}
-                        onChange={(e) => setGpsCoordinates(e.target.value)}
-                        className="block w-full px-4 py-3 rounded-lg border border-slate-300 bg-white text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 shadow-sm transition-all font-medium"
-                        placeholder="e.g. 35.123, -90.456"
-                        required={isAddedBore}
-                      />
-                    </div>
-                  )}
                 </div>
               ) : taskType === 'Plow Duct' || taskType === 'Trench' ? (
                 <div className="animate-in fade-in slide-in-from-top-2">
