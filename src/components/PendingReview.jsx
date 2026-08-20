@@ -14,6 +14,18 @@ export default function PendingReview() {
     ? redlines.filter(r => r.psNumber === selectedEntry.psNumber)
     : [];
 
+  const checkIfDuplicate = (log) => {
+    return entries.some(e => 
+      e.id !== log.id && 
+      (e.status === 'Accepted' || e.status === 'Pending') &&
+      e.taskType === log.taskType && 
+      e.rdtSection === log.rdtSection && 
+      e.route === log.route && 
+      e.location === log.location && 
+      e.town === log.town
+    );
+  };
+
   const handleVerify = async () => {
     if (selectedEntry) {
       await verifyEntry(selectedEntry.id);
@@ -56,25 +68,34 @@ export default function PendingReview() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-slate-100">
-                {pendingLogs.map((log) => (
-                  <tr key={log.id} className="hover:bg-indigo-50/50 cursor-pointer transition-colors" onClick={() => setSelectedEntry(log)}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">{log.inspector}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">{formatDate(log.date)}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-700">{log.town || 'Shidler'}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-indigo-600">{log.psNumber}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
-                      <span className="px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full bg-slate-100 text-slate-800 border border-slate-200">
-                        {log.taskType}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
-                      {log.rdtSection} &gt; {log.route} &gt; {log.location}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-center">
-                      <button className="text-indigo-600 hover:text-indigo-900 font-semibold text-sm">Review</button>
-                    </td>
-                  </tr>
-                ))}
+                {pendingLogs.map((log) => {
+                  const isDup = checkIfDuplicate(log);
+                  return (
+                    <tr key={log.id} className={`${isDup ? 'bg-red-50 hover:bg-red-100' : 'hover:bg-indigo-50/50'} cursor-pointer transition-colors`} onClick={() => setSelectedEntry(log)}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">{log.inspector}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">{formatDate(log.date)}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-700">{log.town || 'Shidler'}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-indigo-600">{log.psNumber}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700 flex items-center">
+                        <span className="px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full bg-slate-100 text-slate-800 border border-slate-200">
+                          {log.taskType}
+                        </span>
+                        {isDup && (
+                          <span className="ml-2 flex h-3 w-3 relative" title="Duplicate Entry Detected">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                        {log.rdtSection} &gt; {log.route} &gt; {log.location}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-center">
+                        <button className="text-indigo-600 hover:text-indigo-900 font-semibold text-sm">Review</button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           ) : (
@@ -101,6 +122,16 @@ export default function PendingReview() {
                 <X className="h-6 w-6" />
               </button>
             </div>
+
+            {checkIfDuplicate(selectedEntry) && (
+              <div className="bg-red-600 text-white p-4 flex items-center justify-center shadow-inner animate-pulse">
+                <AlertCircle className="w-8 h-8 mr-3 shrink-0" />
+                <div>
+                  <h4 className="font-black text-lg tracking-wide uppercase">Duplicate Entry Detected</h4>
+                  <p className="font-medium text-red-100 text-sm">Another pending or verified log for this exact Task Type and Location already exists!</p>
+                </div>
+              </div>
+            )}
 
             <div className="flex-1 overflow-y-auto p-6 flex flex-col lg:flex-row gap-8">
               
