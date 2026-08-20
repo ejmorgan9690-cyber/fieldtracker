@@ -6,8 +6,10 @@ export default function PendingReview() {
   const { entries, redlines, verifyEntry, rejectEntry } = useAppContext();
   const [selectedEntry, setSelectedEntry] = useState(null);
 
-  // Filter logs that are pending
-  const pendingLogs = entries.filter(e => e.status !== 'Accepted' && e.status !== 'Rejected');
+  // Filter logs that are pending and sort newest first
+  const pendingLogs = entries
+    .filter(e => e.status !== 'Accepted' && e.status !== 'Rejected')
+    .sort((a, b) => new Date(b.created_at || b.date) - new Date(a.created_at || a.date));
 
   // Find matching redlines for the selected entry
   const matchingRedlines = selectedEntry 

@@ -11,21 +11,21 @@ export default function MyHistory() {
   const myEntries = useMemo(() => {
     return entries
       .filter(e => e.inspector === authUser?.name && !(e.taskType === 'Hand Hole' && e.handHoleStatus === 'Not Complete'))
-      .sort((a, b) => new Date(b.date) - new Date(a.date));
+      .sort((a, b) => new Date(b.created_at || b.date) - new Date(a.created_at || a.date));
   }, [entries, authUser]);
 
   // Filter for current user's dailies
   const myDailies = useMemo(() => {
     return dailies
       .filter(d => d.inspector === authUser?.name)
-      .sort((a, b) => new Date(b.date) - new Date(a.date));
+      .sort((a, b) => new Date(b.created_at || b.date) - new Date(a.created_at || a.date));
   }, [dailies, authUser]);
 
   // Filter for current user's redlines
   const myRedlines = useMemo(() => {
     return redlines
       .filter(r => r.inspector === authUser?.name)
-      .sort((a, b) => new Date(b.date) - new Date(a.date));
+      .sort((a, b) => new Date(b.created_at || b.date) - new Date(a.created_at || a.date));
   }, [redlines, authUser]);
 
   return (

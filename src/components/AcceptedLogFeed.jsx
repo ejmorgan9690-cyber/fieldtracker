@@ -13,7 +13,7 @@ export default function AcceptedLogFeed() {
     if (filterDate && e.date !== filterDate) return false;
     if (filterInspector && e.inspector !== filterInspector) return false;
     return true;
-  }).sort((a, b) => new Date(b.date) - new Date(a.date));
+  }).sort((a, b) => new Date(b.created_at || b.date) - new Date(a.created_at || a.date));
 
   const handleDelete = (id) => {
     if (window.confirm("Are you sure you want to permanently delete this accepted log? This will also revert it off the map automatically.")) {

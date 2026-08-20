@@ -67,7 +67,8 @@ export const AppProvider = ({ children }) => {
             route: row.route,
             location: row.location,
             psNumber: row.ps_number || '',
-            imageData: row.image_data
+            imageData: row.image_data,
+            created_at: row.created_at || null
           }));
           setRedlines(mappedRedlines);
           localStorage.setItem('fieldTrackerRedlines', JSON.stringify(mappedRedlines));
