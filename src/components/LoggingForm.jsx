@@ -93,7 +93,7 @@ const Combobox = ({ id, label, value, onChange, options, placeholder, required }
 };
 
 export default function LoggingForm() {
-  const { authUser, addEntry, addRedline } = useAppContext();
+  const { authUser, addEntry, addRedline, entries } = useAppContext();
   
   const getLocalDateString = () => {
     const d = new Date();
