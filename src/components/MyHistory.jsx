@@ -89,11 +89,11 @@ export default function MyHistory() {
               <table className={`min-w-full divide-y divide-slate-200 ${compactView ? 'text-xs' : ''}`}>
                 <thead className="bg-slate-50">
                   <tr>
-                    <th scope="col" className={`${compactView ? 'px-2 py-2' : 'px-8 py-4'} text-left text-xs font-bold text-slate-500 uppercase tracking-wider`}>Date</th>
-                    <th scope="col" className={`${compactView ? 'px-2 py-2' : 'px-8 py-4'} text-left text-xs font-bold text-slate-500 uppercase tracking-wider`}>Hierarchy</th>
-                    <th scope="col" className={`${compactView ? 'px-2 py-2' : 'px-8 py-4'} text-left text-xs font-bold text-slate-500 uppercase tracking-wider`}>Task Type</th>
-                    <th scope="col" className={`${compactView ? 'px-2 py-2' : 'px-8 py-4'} text-right text-xs font-bold text-slate-500 uppercase tracking-wider`}>Footage / Qty</th>
-                    <th scope="col" className={`${compactView ? 'px-2 py-2' : 'px-8 py-4'} text-center text-xs font-bold text-slate-500 uppercase tracking-wider`}>Action</th>
+                    <th scope="col" className={`${compactView ? 'px-1 py-1 text-[9px] whitespace-normal' : 'px-8 py-4 text-xs whitespace-nowrap'} text-left font-bold text-slate-500 uppercase tracking-wider`}>Date</th>
+                    <th scope="col" className={`${compactView ? 'px-1 py-1 text-[9px] whitespace-normal' : 'px-8 py-4 text-xs whitespace-nowrap'} text-left font-bold text-slate-500 uppercase tracking-wider`}>Path</th>
+                    <th scope="col" className={`${compactView ? 'px-1 py-1 text-[9px] whitespace-normal' : 'px-8 py-4 text-xs whitespace-nowrap'} text-left font-bold text-slate-500 uppercase tracking-wider`}>Task</th>
+                    <th scope="col" className={`${compactView ? 'px-1 py-1 text-[9px] whitespace-normal' : 'px-8 py-4 text-xs whitespace-nowrap'} text-right font-bold text-slate-500 uppercase tracking-wider`}>Amt</th>
+                    <th scope="col" className={`${compactView ? 'px-1 py-1 text-[9px] whitespace-normal' : 'px-8 py-4 text-xs whitespace-nowrap'} text-center font-bold text-slate-500 uppercase tracking-wider`}>Act</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-slate-100">
@@ -101,15 +101,15 @@ export default function MyHistory() {
                     const isAccepted = row.status === 'Accepted' && row.taskType !== 'Drop';
                     return (
                       <tr key={idx} className={`transition-colors ${isAccepted ? 'bg-red-50 hover:bg-red-100' : idx % 2 === 0 ? 'bg-white hover:bg-indigo-50/80' : 'bg-slate-50/50 hover:bg-indigo-50/80'}`}>
-                        <td className={`${compactView ? 'px-2 py-2' : 'px-8 py-4'} whitespace-nowrap ${compactView ? 'text-xs' : 'text-sm'} font-medium text-slate-900`}>
+                        <td className={`${compactView ? 'px-1 py-2 whitespace-normal break-words leading-tight' : 'px-8 py-4 whitespace-nowrap'} ${compactView ? 'text-[10px]' : 'text-sm'} font-medium text-slate-900`}>
                           {formatDate(row.date)}
-                          {isAccepted && <span className="ml-2 px-1.5 py-0.5 text-[9px] font-bold bg-red-100 text-red-700 rounded-full border border-red-200">OK</span>}
+                          {isAccepted && <div className="mt-1"><span className="px-1.5 py-0.5 text-[8px] font-bold bg-red-100 text-red-700 rounded-full border border-red-200">OK</span></div>}
                         </td>
-                        <td className={`${compactView ? 'px-2 py-2' : 'px-8 py-4'} whitespace-nowrap ${compactView ? 'text-xs' : 'text-sm'} text-slate-700`}>
-                          {compactView ? `${row.route} L${row.location}` : `${row.rdtSection} > ${row.route} > ${row.location}`}
+                        <td className={`${compactView ? 'px-1 py-2 whitespace-normal break-words leading-tight' : 'px-8 py-4 whitespace-nowrap'} ${compactView ? 'text-[10px]' : 'text-sm'} text-slate-700`}>
+                          {compactView ? `R${row.route} L${row.location}` : `${row.rdtSection} > ${row.route} > ${row.location}`}
                         </td>
-                        <td className={`${compactView ? 'px-2 py-2' : 'px-8 py-4'} whitespace-nowrap text-sm text-slate-700`}>
-                          <span className={`inline-flex font-bold rounded-full ${compactView ? 'px-2 py-0.5 text-[10px]' : 'px-3 py-1 text-xs'}
+                        <td className={`${compactView ? 'px-1 py-2 whitespace-normal break-words leading-tight' : 'px-8 py-4 whitespace-nowrap'} text-sm text-slate-700`}>
+                          <span className={`inline-flex font-bold rounded-full ${compactView ? 'px-1.5 py-0.5 text-[9px] leading-none' : 'px-3 py-1 text-xs leading-5'}
                             ${row.taskType === 'Bore' ? 'bg-orange-100 text-orange-800 border border-orange-200' : 
                               row.taskType === 'Fiber' ? 'bg-indigo-100 text-indigo-800 border border-indigo-200' : 
                               row.taskType === 'Drop' ? 'bg-pink-100 text-pink-800 border border-pink-200' :
@@ -122,31 +122,31 @@ export default function MyHistory() {
                             {row.dropNumber ? ` (${row.dropNumber})` : ''}
                           </span>
                           {(row.unitCode || row.psNumber) && (
-                            <div className={`mt-1 text-slate-500 font-bold ${compactView ? 'text-[10px]' : 'text-xs'}`}>
-                              {row.unitCode && <span>Unit: {row.unitCode} </span>}
-                              {row.psNumber && <span>{row.unitCode && '| '}PS: {row.psNumber}</span>}
+                            <div className={`mt-0.5 text-slate-500 font-bold ${compactView ? 'text-[9px]' : 'text-xs'}`}>
+                              {row.unitCode && <span>U:{row.unitCode} </span>}
+                              {row.psNumber && <span>{row.unitCode && '| '}PS:{row.psNumber}</span>}
                             </div>
                           )}
                           {row.gpsCoordinates && (
-                            <div className={`mt-1 text-slate-500 font-medium ${compactView ? 'text-[10px]' : 'text-xs'}`}>
+                            <div className={`mt-0.5 text-slate-500 font-medium ${compactView ? 'text-[9px]' : 'text-xs'}`}>
                               GPS: {row.gpsCoordinates}
                             </div>
                           )}
                         </td>
-                        <td className={`${compactView ? 'px-2 py-2 text-xs' : 'px-8 py-4 text-sm'} whitespace-nowrap text-right font-bold text-slate-900`}>
+                        <td className={`${compactView ? 'px-1 py-2 text-[10px] whitespace-normal' : 'px-8 py-4 text-sm whitespace-nowrap'} text-right font-bold text-slate-900`}>
                           {row.footage.toLocaleString()} <span className="text-slate-500 font-medium">{row.taskType === 'Hand Hole' || row.taskType === 'Drop' || row.taskType === 'Fiber Loop' ? 'qty' : 'ft'}</span>
                       </td>
-                      <td className={`${compactView ? 'px-2 py-2' : 'px-8 py-4'} whitespace-nowrap text-center`}>
+                      <td className={`${compactView ? 'px-1 py-2' : 'px-8 py-4 whitespace-nowrap'} text-center`}>
                         <button
                           onClick={() => {
                             if (window.confirm('Are you sure you want to delete this log?')) {
                               deleteEntry(row.id);
                             }
                           }}
-                          className={`text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors ${compactView ? 'p-1' : 'p-2'}`}
+                          className={`text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors ${compactView ? 'p-0.5' : 'p-2'}`}
                           title="Delete entry"
                         >
-                          <Trash2 className={`${compactView ? 'h-4 w-4' : 'h-5 w-5'} mx-auto`} />
+                          <Trash2 className={`${compactView ? 'h-3.5 w-3.5' : 'h-5 w-5'} mx-auto`} />
                         </button>
                       </td>
                     </tr>
