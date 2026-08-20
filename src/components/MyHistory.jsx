@@ -5,6 +5,7 @@ import { Trash2, Map } from 'lucide-react';
 export default function MyHistory() {
   const { entries, dailies, redlines, authUser, deleteEntry, deleteDaily, deleteRedline } = useAppContext();
   const [view, setView] = useState('production'); // 'production' | 'dailies' | 'redlines'
+  const [compactView, setCompactView] = useState(false);
 
   // Filter for only current user's entries
   const myEntries = useMemo(() => {
@@ -68,21 +69,31 @@ export default function MyHistory() {
 
       {view === 'production' && (
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 sm:p-8 animate-in fade-in">
-          <div className="mb-6 pb-6 border-b border-slate-100">
-            <h2 className="text-2xl font-bold text-slate-800 tracking-tight">My Production History</h2>
-            <p className="mt-1 text-sm text-slate-500">Review or delete your previously submitted production logs.</p>
+          <div className="mb-6 pb-6 border-b border-slate-100 flex justify-between items-end">
+            <div>
+              <h2 className="text-2xl font-bold text-slate-800 tracking-tight">My Production History</h2>
+              <p className="mt-1 text-sm text-slate-500">Review or delete your previously submitted production logs.</p>
+            </div>
+            <button
+              onClick={() => setCompactView(!compactView)}
+              className={`hidden sm:hidden md:hidden lg:hidden xl:hidden min-[300px]:flex px-3 py-1.5 text-xs font-bold rounded-lg border transition-colors items-center ${compactView ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'}`}
+              title="Toggle Zoom Out"
+            >
+              <Map className="w-3 h-3 mr-1.5" />
+              {compactView ? 'Zoomed Out' : 'Zoom Out'}
+            </button>
           </div>
           
           <div className="overflow-x-auto">
             {myEntries.length > 0 ? (
-              <table className="min-w-full divide-y divide-slate-200">
+              <table className={`min-w-full divide-y divide-slate-200 ${compactView ? 'text-xs' : ''}`}>
                 <thead className="bg-slate-50">
                   <tr>
-                    <th scope="col" className="px-8 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Date</th>
-                    <th scope="col" className="px-8 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Hierarchy</th>
-                    <th scope="col" className="px-8 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Task Type</th>
-                    <th scope="col" className="px-8 py-4 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Footage / Qty</th>
-                    <th scope="col" className="px-8 py-4 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">Action</th>
+                    <th scope="col" className={`${compactView ? 'px-2 py-2' : 'px-8 py-4'} text-left text-xs font-bold text-slate-500 uppercase tracking-wider`}>Date</th>
+                    <th scope="col" className={`${compactView ? 'px-2 py-2' : 'px-8 py-4'} text-left text-xs font-bold text-slate-500 uppercase tracking-wider`}>Hierarchy</th>
+                    <th scope="col" className={`${compactView ? 'px-2 py-2' : 'px-8 py-4'} text-left text-xs font-bold text-slate-500 uppercase tracking-wider`}>Task Type</th>
+                    <th scope="col" className={`${compactView ? 'px-2 py-2' : 'px-8 py-4'} text-right text-xs font-bold text-slate-500 uppercase tracking-wider`}>Footage / Qty</th>
+                    <th scope="col" className={`${compactView ? 'px-2 py-2' : 'px-8 py-4'} text-center text-xs font-bold text-slate-500 uppercase tracking-wider`}>Action</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-slate-100">
@@ -90,15 +101,15 @@ export default function MyHistory() {
                     const isAccepted = row.status === 'Accepted' && row.taskType !== 'Drop';
                     return (
                       <tr key={idx} className={`transition-colors ${isAccepted ? 'bg-red-50 hover:bg-red-100' : idx % 2 === 0 ? 'bg-white hover:bg-indigo-50/80' : 'bg-slate-50/50 hover:bg-indigo-50/80'}`}>
-                        <td className="px-8 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
+                        <td className={`${compactView ? 'px-2 py-2' : 'px-8 py-4'} whitespace-nowrap ${compactView ? 'text-xs' : 'text-sm'} font-medium text-slate-900`}>
                           {formatDate(row.date)}
-                          {isAccepted && <span className="ml-2 px-2 py-0.5 text-[10px] font-bold bg-red-100 text-red-700 rounded-full border border-red-200">ACCEPTED</span>}
+                          {isAccepted && <span className="ml-2 px-1.5 py-0.5 text-[9px] font-bold bg-red-100 text-red-700 rounded-full border border-red-200">OK</span>}
                         </td>
-                        <td className="px-8 py-4 whitespace-nowrap text-sm text-slate-700">
-                          {row.rdtSection} &gt; {row.route} &gt; {row.location}
+                        <td className={`${compactView ? 'px-2 py-2' : 'px-8 py-4'} whitespace-nowrap ${compactView ? 'text-xs' : 'text-sm'} text-slate-700`}>
+                          {compactView ? `${row.route} L${row.location}` : `${row.rdtSection} > ${row.route} > ${row.location}`}
                         </td>
-                        <td className="px-8 py-4 whitespace-nowrap text-sm text-slate-700">
-                          <span className={`px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full 
+                        <td className={`${compactView ? 'px-2 py-2' : 'px-8 py-4'} whitespace-nowrap text-sm text-slate-700`}>
+                          <span className={`inline-flex font-bold rounded-full ${compactView ? 'px-2 py-0.5 text-[10px]' : 'px-3 py-1 text-xs'}
                             ${row.taskType === 'Bore' ? 'bg-orange-100 text-orange-800 border border-orange-200' : 
                               row.taskType === 'Fiber' ? 'bg-indigo-100 text-indigo-800 border border-indigo-200' : 
                               row.taskType === 'Drop' ? 'bg-pink-100 text-pink-800 border border-pink-200' :
@@ -111,31 +122,31 @@ export default function MyHistory() {
                             {row.dropNumber ? ` (${row.dropNumber})` : ''}
                           </span>
                           {(row.unitCode || row.psNumber) && (
-                            <div className="mt-1 text-xs text-slate-500 font-bold">
+                            <div className={`mt-1 text-slate-500 font-bold ${compactView ? 'text-[10px]' : 'text-xs'}`}>
                               {row.unitCode && <span>Unit: {row.unitCode} </span>}
                               {row.psNumber && <span>{row.unitCode && '| '}PS: {row.psNumber}</span>}
                             </div>
                           )}
                           {row.gpsCoordinates && (
-                            <div className="mt-1 text-xs text-slate-500 font-medium">
+                            <div className={`mt-1 text-slate-500 font-medium ${compactView ? 'text-[10px]' : 'text-xs'}`}>
                               GPS: {row.gpsCoordinates}
                             </div>
                           )}
                         </td>
-                        <td className="px-8 py-4 whitespace-nowrap text-sm text-right font-bold text-slate-900">
+                        <td className={`${compactView ? 'px-2 py-2 text-xs' : 'px-8 py-4 text-sm'} whitespace-nowrap text-right font-bold text-slate-900`}>
                           {row.footage.toLocaleString()} <span className="text-slate-500 font-medium">{row.taskType === 'Hand Hole' || row.taskType === 'Drop' || row.taskType === 'Fiber Loop' ? 'qty' : 'ft'}</span>
                       </td>
-                      <td className="px-8 py-4 whitespace-nowrap text-center">
+                      <td className={`${compactView ? 'px-2 py-2' : 'px-8 py-4'} whitespace-nowrap text-center`}>
                         <button
                           onClick={() => {
                             if (window.confirm('Are you sure you want to delete this log?')) {
                               deleteEntry(row.id);
                             }
                           }}
-                          className="text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded-lg transition-colors"
+                          className={`text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors ${compactView ? 'p-1' : 'p-2'}`}
                           title="Delete entry"
                         >
-                          <Trash2 className="h-5 w-5 mx-auto" />
+                          <Trash2 className={`${compactView ? 'h-4 w-4' : 'h-5 w-5'} mx-auto`} />
                         </button>
                       </td>
                     </tr>
