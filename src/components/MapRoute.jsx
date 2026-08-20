@@ -677,11 +677,17 @@ export default function MapRoute() {
                 const unitStr = seg.unitCode ? `<br/>${seg.unitCode}` : '';
                 const ftStr = seg.ft ? `<br/>${seg.ft}'` : '';
                 
+                const isFiber = seg.type === 'fiber';
+                const containerClass = isFiber ? 'red-pen-container-fiber' : 'red-pen-container';
+                const lineClass = isFiber ? 'red-pen-line-fiber' : 'red-pen-line';
+                const textClass = isFiber ? 'red-pen-text-fiber' : 'red-pen-text';
+                const anchor = isFiber ? [0, 0] : [0, 80];
+                
                 const icon = L.divIcon({
                   className: 'red-pen-label',
-                  html: `<div class="red-pen-container">
-                           <div class="red-pen-line"></div>
-                           <div class="red-pen-text">
+                  html: `<div class="${containerClass}">
+                           <div class="${lineClass}"></div>
+                           <div class="${textClass}">
                              ${seg.inspector}<br/>
                              ${dateStr}
                              ${unitStr}
@@ -689,7 +695,7 @@ export default function MapRoute() {
                            </div>
                          </div>`,
                   iconSize: [120, 80],
-                  iconAnchor: [0, 80] // anchors the bottom-left corner of the container to the point
+                  iconAnchor: anchor
                 });
 
                 return (
