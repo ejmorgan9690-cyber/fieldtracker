@@ -21,234 +21,6 @@ const getTownKey = (feature) => {
 const normalizeRdt = (val) => {
   if (!val) return '';
   return val.replace(/^Node\s+/i, '').trim();
-};
-
-export default function MapRoute() {
-  const { entries } = useAppContext();
-  const [geoData, setGeoData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [showLegend, setShowLegend] = useState(true);
-
-  // Pre-calculate indexes and completed segments for fast rendering
-  const { completedHandholes, completedSegments } = useMemo(() => {
-    const completedHH = new Set();
-    const segments = [];
-    if (!entries || !geoData) return { completedHandholes: completedHH, completedSegments: segments };
-
-    // 1. Build indexes of the GeoJSON data for quick lookup
-    const pointsMap = new Map(); // key: "Town_Csa_Route_Loc"
-    const linesMap = new Map();  // key: "Town_Csa_Route", value: Array of LineStrings
-
-    geoData.features.forEach(f => {
-      const p = f.properties || {};
-      const town = getTownKey(f);
-      
-      if (f.geometry && f.geometry.type === 'Point' && p.Csa && p.Rt__no_ && p.Loc__no_) {
-        const normCsa = normalizeRdt(p.Csa);
-        pointsMap.set(`${town}_${normCsa}_${p.Rt__no_}_${p.Loc__no_}`, f);
-      }
-      if (f.geometry && f.geometry.type === 'LineString' && p.CSA && p.Route) {
-        const normCsa = normalizeRdt(p.CSA);
-        const key = `${town}_${normCsa}_${p.Route}`;
-        if (!linesMap.has(key)) linesMap.set(key, []);
-        linesMap.get(key).push(f);
-      }
-    });
-
-    // 2. Process Accepted entries
-    const segmentFootages = new Map(); // key: hhKey, value: { duct: 0, fiber: 0 }
-
-    entries.forEach(entry => {
-      if (entry.status === 'Accepted' && entry.taskType !== 'Drop') {
-        const town = entry.town || 'Shidler'; // Default to Shidler for older logs
-        const rdt = normalizeRdt(entry.rdtSection);
-        const route = entry.route ? String(entry.route).replace('Route ', '') : '';
-        const loc = entry.location;
-        const hhKey = `${town}_${rdt}_${route}_${loc}`;
-        
-        if (entry.taskType === 'Hand Hole') {
-          // ONLY highlight the handhole icon if they specifically logged a Hand Hole
-          completedHH.add(hhKey);
-        } else {
-          // For routes (Bore, Plow, Fiber), calculate cumulative footage
-          const ft = parseFloat(entry.footage) || 0;
-          if (ft > 0) {
-            if (!segmentFootages.has(hhKey)) {
-              segmentFootages.set(hhKey, { duct: 0, fiber: 0 });
-            }
-            const currentFt = segmentFootages.get(hhKey);
-            if (entry.taskType === 'Fiber') {
-              currentFt.fiber += ft;
-            } else {
-              currentFt.duct += ft;
-            }
-          }
-        }
-      }
-    });
-    
-    // 3. Render Route Lines dynamically based on cumulative footage
-    for (const [hhKey, totalFt] of segmentFootages.entries()) {
-      const [town, rdt, route, loc] = hhKey.split('_');
-      const routeLines = linesMap.get(`${town}_${rdt}_${route}`);
-      const endPoint = pointsMap.get(hhKey);
-      
-      if (routeLines && routeLines.length > 0 && endPoint) {
-        // Find the specific line segment that this handhole sits on
-        let routeLine = routeLines[0];
-        if (routeLines.length > 1) {
-          let minD = Infinity;
-          routeLines.forEach(l => {
-            const d = turf.pointToLineDistance(endPoint, l);
-            if (d < minD) {
-              minD = d;
-              routeLine = l;
-            }
-          });
-        }
-
-        // Find the Start Point (previous location, or start of the line if Loc 1)
-        let startPoint = null;
-        const prevLocStr = String(parseInt(loc, 10) - 1);
-        if (pointsMap.has(`${town}_${rdt}_${route}_${prevLocStr}`)) {
-          startPoint = pointsMap.get(`${town}_${rdt}_${route}_${prevLocStr}`);
-        } else {
-          startPoint = turf.point(routeLine.geometry.coordinates[0]);
-        }
-        
-        try {
-          // Slice the full physical line segment between the two locations
-          const fullSegment = turf.lineSlice(startPoint, endPoint, routeLine);
-          const fullLengthFt = turf.length(fullSegment, {units: 'feet'});
-          
-          if (totalFt.duct > 0) {
-            let ductSegment = fullSegment;
-            if (totalFt.duct < (fullLengthFt - 15)) {
-              ductSegment = turf.lineSliceAlong(fullSegment, 0, totalFt.duct, {units: 'feet'});
-            }
-            const ductLatLngs = ductSegment.geometry.coordinates.map(coord => [coord[1], coord[0]]);
-            segments.push({ key: hhKey + '_duct', positions: ductLatLngs, color: '#22c55e' }); // Green
-          }
-          
-          if (totalFt.fiber > 0) {
-            let fiberSegment = fullSegment;
-            if (totalFt.fiber < (fullLengthFt - 15)) {
-              fiberSegment = turf.lineSliceAlong(fullSegment, 0, totalFt.fiber, {units: 'feet'});
-            }
-            const fiberLatLngs = fiberSegment.geometry.coordinates.map(coord => [coord[1], coord[0]]);
-            segments.push({ key: hhKey + '_fiber', positions: fiberLatLngs, color: '#a855f7' }); // Purple
-          }
-        } catch (err) {
-          console.warn("Could not slice line segment for", hhKey, err);
-          const startCoords = startPoint.geometry.coordinates;
-          const endCoords = endPoint.geometry.coordinates;
-          const fallbackPositions = [[startCoords[1], startCoords[0]], [endCoords[1], endCoords[0]]];
-          
-          if (totalFt.duct > 0) segments.push({ key: hhKey + '_duct', positions: fallbackPositions, color: '#22c55e' });
-          if (totalFt.fiber > 0) segments.push({ key: hhKey + '_fiber', positions: fallbackPositions, color: '#a855f7' });
-        }
-      }
-    }
-    
-    return { completedHandholes: completedHH, completedSegments: segments };
-  }, [entries, geoData]);
-
-  useEffect(() => {
-    // Fix Leaflet's default icon paths not working in React apps sometimes
-    delete L.Icon.Default.prototype._getIconUrl;
-    L.Icon.Default.mergeOptions({
-      iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-      iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-      shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-    });
-
-    fetch('/route.geojson')
-      .then((res) => {
-        if (!res.ok) throw new Error('Failed to load map data');
-        return res.json();
-      })
-      .then((data) => {
-        setGeoData(data);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error('Error loading geojson:', err);
-        setError(err.message);
-        setLoading(false);
-      });
-  }, []);
-
-  const getStyle = (feature) => {
-    // Render lines as red lines as requested
-    return {
-      color: '#ef4444', // Red line for fiber route
-      weight: 4,
-      opacity: 0.9,
-    };
-  };
-
-  const pointToLayer = (feature, latlng) => {
-    const p = feature.properties || {};
-    
-    // Check if it is a Handhole (either by Loc__type or if the icon implies a square)
-    const isHandhole = p.Loc__type === 'HH' || (p.name && p.name.match(/^[A-Z0-9]+-[0-9]+$/)) || (p.icon && p.icon.includes('square'));
-    
-    if (isHandhole) {
-      // Check if this specific handhole is completed
-      // The KML properties: Csa (e.g. 'RDT1'), Rt__no_ (e.g. '3C'), Loc__no_ (e.g. '1')
-      const town = getTownKey(feature);
-      const csa = normalizeRdt(p.Csa);
-      const rts = p.Rt__no_ ? String(p.Rt__no_).split(/[\/,&]/).map(s => s.trim()) : [''];
-      const loc = p.Loc__no_ || '';
-      
-      // If the handhole is shared (e.g., Rt__no_ is "1/3"), check if any of the routes are completed
-      const isCompleted = rts.some(rt => completedHandholes.has(`${town}_${csa}_${rt}_${loc}`));
-      
-      const bgColor = isCompleted ? '#22c55e' : 'black'; // Green if completed, black if pending
-      const borderColor = isCompleted ? '#16a34a' : 'white';
-      
-      // Create a small box with the label next to it
-      const html = `
-        <div style="display: flex; align-items: center; transform: translate(-5px, -5px);">
-          <div style="width: 12px; height: 12px; background-color: ${bgColor}; border: 1.5px solid ${borderColor}; flex-shrink: 0; box-shadow: 0 1px 2px rgba(0,0,0,0.3);"></div>
-          <span style="margin-left: 5px; font-size: 11px; font-weight: 900; color: ${isCompleted ? '#16a34a' : 'black'}; text-shadow: 1px 1px 0 #fff, -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff; white-space: nowrap;">
-            ${p.name || ''}
-          </span>
-        </div>
-      `;
-      
-      return L.marker(latlng, {
-        icon: L.divIcon({
-          className: 'custom-hh-icon',
-          html: html,
-          iconSize: [0, 0],
-          iconAnchor: [0, 0]
-        })
-      });
-    } else {
-      // Other generic points (make them small circle markers so they don't block the screen)
-      return L.circleMarker(latlng, {
-        radius: 3.5,
-        fillColor: p['icon-color'] || '#3b82f6',
-        color: '#ffffff',
-        weight: 1,
-        fillOpacity: 0.7
-      });
-    }
-  };
-
-  const onEachFeature = (feature, layer) => {
-    if (feature.properties) {
-      const p = feature.properties;
-      let popupContent = `<strong>${p.name || 'Feature'}</strong>`;
-      if (p.Loc__type) popupContent += `<br/>Type: ${p.Loc__type}`;
-      if (p.descriptio) popupContent += `<br/>${p.descriptio}`;
-      layer.bindPopup(popupContent);
-    }
-  };
-
-  // Component for searching and flying the map to a specific location
   const MapSearch = ({ geoData, entries, completedSegments }) => {
     const map = useMap();
     const [isMinimized, setIsMinimized] = useState(false);
@@ -519,6 +291,234 @@ export default function MapRoute() {
     }, [data, map]);
     return null;
   };
+};
+
+export default function MapRoute() {
+  const { entries } = useAppContext();
+  const [geoData, setGeoData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [showLegend, setShowLegend] = useState(true);
+
+  // Pre-calculate indexes and completed segments for fast rendering
+  const { completedHandholes, completedSegments } = useMemo(() => {
+    const completedHH = new Set();
+    const segments = [];
+    if (!entries || !geoData) return { completedHandholes: completedHH, completedSegments: segments };
+
+    // 1. Build indexes of the GeoJSON data for quick lookup
+    const pointsMap = new Map(); // key: "Town_Csa_Route_Loc"
+    const linesMap = new Map();  // key: "Town_Csa_Route", value: Array of LineStrings
+
+    geoData.features.forEach(f => {
+      const p = f.properties || {};
+      const town = getTownKey(f);
+      
+      if (f.geometry && f.geometry.type === 'Point' && p.Csa && p.Rt__no_ && p.Loc__no_) {
+        const normCsa = normalizeRdt(p.Csa);
+        pointsMap.set(`${town}_${normCsa}_${p.Rt__no_}_${p.Loc__no_}`, f);
+      }
+      if (f.geometry && f.geometry.type === 'LineString' && p.CSA && p.Route) {
+        const normCsa = normalizeRdt(p.CSA);
+        const key = `${town}_${normCsa}_${p.Route}`;
+        if (!linesMap.has(key)) linesMap.set(key, []);
+        linesMap.get(key).push(f);
+      }
+    });
+
+    // 2. Process Accepted entries
+    const segmentFootages = new Map(); // key: hhKey, value: { duct: 0, fiber: 0 }
+
+    entries.forEach(entry => {
+      if (entry.status === 'Accepted' && entry.taskType !== 'Drop') {
+        const town = entry.town || 'Shidler'; // Default to Shidler for older logs
+        const rdt = normalizeRdt(entry.rdtSection);
+        const route = entry.route ? String(entry.route).replace('Route ', '') : '';
+        const loc = entry.location;
+        const hhKey = `${town}_${rdt}_${route}_${loc}`;
+        
+        if (entry.taskType === 'Hand Hole') {
+          // ONLY highlight the handhole icon if they specifically logged a Hand Hole
+          completedHH.add(hhKey);
+        } else {
+          // For routes (Bore, Plow, Fiber), calculate cumulative footage
+          const ft = parseFloat(entry.footage) || 0;
+          if (ft > 0) {
+            if (!segmentFootages.has(hhKey)) {
+              segmentFootages.set(hhKey, { duct: 0, fiber: 0 });
+            }
+            const currentFt = segmentFootages.get(hhKey);
+            if (entry.taskType === 'Fiber') {
+              currentFt.fiber += ft;
+            } else {
+              currentFt.duct += ft;
+            }
+          }
+        }
+      }
+    });
+    
+    // 3. Render Route Lines dynamically based on cumulative footage
+    for (const [hhKey, totalFt] of segmentFootages.entries()) {
+      const [town, rdt, route, loc] = hhKey.split('_');
+      const routeLines = linesMap.get(`${town}_${rdt}_${route}`);
+      const endPoint = pointsMap.get(hhKey);
+      
+      if (routeLines && routeLines.length > 0 && endPoint) {
+        // Find the specific line segment that this handhole sits on
+        let routeLine = routeLines[0];
+        if (routeLines.length > 1) {
+          let minD = Infinity;
+          routeLines.forEach(l => {
+            const d = turf.pointToLineDistance(endPoint, l);
+            if (d < minD) {
+              minD = d;
+              routeLine = l;
+            }
+          });
+        }
+
+        // Find the Start Point (previous location, or start of the line if Loc 1)
+        let startPoint = null;
+        const prevLocStr = String(parseInt(loc, 10) - 1);
+        if (pointsMap.has(`${town}_${rdt}_${route}_${prevLocStr}`)) {
+          startPoint = pointsMap.get(`${town}_${rdt}_${route}_${prevLocStr}`);
+        } else {
+          startPoint = turf.point(routeLine.geometry.coordinates[0]);
+        }
+        
+        try {
+          // Slice the full physical line segment between the two locations
+          const fullSegment = turf.lineSlice(startPoint, endPoint, routeLine);
+          const fullLengthFt = turf.length(fullSegment, {units: 'feet'});
+          
+          if (totalFt.duct > 0) {
+            let ductSegment = fullSegment;
+            if (totalFt.duct < (fullLengthFt - 15)) {
+              ductSegment = turf.lineSliceAlong(fullSegment, 0, totalFt.duct, {units: 'feet'});
+            }
+            const ductLatLngs = ductSegment.geometry.coordinates.map(coord => [coord[1], coord[0]]);
+            segments.push({ key: hhKey + '_duct', positions: ductLatLngs, color: '#22c55e' }); // Green
+          }
+          
+          if (totalFt.fiber > 0) {
+            let fiberSegment = fullSegment;
+            if (totalFt.fiber < (fullLengthFt - 15)) {
+              fiberSegment = turf.lineSliceAlong(fullSegment, 0, totalFt.fiber, {units: 'feet'});
+            }
+            const fiberLatLngs = fiberSegment.geometry.coordinates.map(coord => [coord[1], coord[0]]);
+            segments.push({ key: hhKey + '_fiber', positions: fiberLatLngs, color: '#a855f7' }); // Purple
+          }
+        } catch (err) {
+          console.warn("Could not slice line segment for", hhKey, err);
+          const startCoords = startPoint.geometry.coordinates;
+          const endCoords = endPoint.geometry.coordinates;
+          const fallbackPositions = [[startCoords[1], startCoords[0]], [endCoords[1], endCoords[0]]];
+          
+          if (totalFt.duct > 0) segments.push({ key: hhKey + '_duct', positions: fallbackPositions, color: '#22c55e' });
+          if (totalFt.fiber > 0) segments.push({ key: hhKey + '_fiber', positions: fallbackPositions, color: '#a855f7' });
+        }
+      }
+    }
+    
+    return { completedHandholes: completedHH, completedSegments: segments };
+  }, [entries, geoData]);
+
+  useEffect(() => {
+    // Fix Leaflet's default icon paths not working in React apps sometimes
+    delete L.Icon.Default.prototype._getIconUrl;
+    L.Icon.Default.mergeOptions({
+      iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+      iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+      shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+    });
+
+    fetch('/route.geojson')
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed to load map data');
+        return res.json();
+      })
+      .then((data) => {
+        setGeoData(data);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error('Error loading geojson:', err);
+        setError(err.message);
+        setLoading(false);
+      });
+  }, []);
+
+  const getStyle = (feature) => {
+    // Render lines as red lines as requested
+    return {
+      color: '#ef4444', // Red line for fiber route
+      weight: 4,
+      opacity: 0.9,
+    };
+  };
+
+  const pointToLayer = (feature, latlng) => {
+    const p = feature.properties || {};
+    
+    // Check if it is a Handhole (either by Loc__type or if the icon implies a square)
+    const isHandhole = p.Loc__type === 'HH' || (p.name && p.name.match(/^[A-Z0-9]+-[0-9]+$/)) || (p.icon && p.icon.includes('square'));
+    
+    if (isHandhole) {
+      // Check if this specific handhole is completed
+      // The KML properties: Csa (e.g. 'RDT1'), Rt__no_ (e.g. '3C'), Loc__no_ (e.g. '1')
+      const town = getTownKey(feature);
+      const csa = normalizeRdt(p.Csa);
+      const rts = p.Rt__no_ ? String(p.Rt__no_).split(/[\/,&]/).map(s => s.trim()) : [''];
+      const loc = p.Loc__no_ || '';
+      
+      // If the handhole is shared (e.g., Rt__no_ is "1/3"), check if any of the routes are completed
+      const isCompleted = rts.some(rt => completedHandholes.has(`${town}_${csa}_${rt}_${loc}`));
+      
+      const bgColor = isCompleted ? '#22c55e' : 'black'; // Green if completed, black if pending
+      const borderColor = isCompleted ? '#16a34a' : 'white';
+      
+      // Create a small box with the label next to it
+      const html = `
+        <div style="display: flex; align-items: center; transform: translate(-5px, -5px);">
+          <div style="width: 12px; height: 12px; background-color: ${bgColor}; border: 1.5px solid ${borderColor}; flex-shrink: 0; box-shadow: 0 1px 2px rgba(0,0,0,0.3);"></div>
+          <span style="margin-left: 5px; font-size: 11px; font-weight: 900; color: ${isCompleted ? '#16a34a' : 'black'}; text-shadow: 1px 1px 0 #fff, -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff; white-space: nowrap;">
+            ${p.name || ''}
+          </span>
+        </div>
+      `;
+      
+      return L.marker(latlng, {
+        icon: L.divIcon({
+          className: 'custom-hh-icon',
+          html: html,
+          iconSize: [0, 0],
+          iconAnchor: [0, 0]
+        })
+      });
+    } else {
+      // Other generic points (make them small circle markers so they don't block the screen)
+      return L.circleMarker(latlng, {
+        radius: 3.5,
+        fillColor: p['icon-color'] || '#3b82f6',
+        color: '#ffffff',
+        weight: 1,
+        fillOpacity: 0.7
+      });
+    }
+  };
+
+  const onEachFeature = (feature, layer) => {
+    if (feature.properties) {
+      const p = feature.properties;
+      let popupContent = `<strong>${p.name || 'Feature'}</strong>`;
+      if (p.Loc__type) popupContent += `<br/>Type: ${p.Loc__type}`;
+      if (p.descriptio) popupContent += `<br/>${p.descriptio}`;
+      layer.bindPopup(popupContent);
+    }
+  };
+
+  // Component for searching and flying the map to a specific location
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full h-[calc(100vh-64px)] flex flex-col">
