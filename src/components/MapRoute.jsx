@@ -607,7 +607,7 @@ export default function MapRoute() {
         )}
 
         {/* Map Mode Toggle */}
-        <div className="absolute top-4 right-4 z-[400] bg-white rounded-lg shadow-md flex overflow-hidden border border-slate-200">
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] bg-white rounded-lg shadow-lg flex overflow-hidden border border-slate-200">
           <button 
             onClick={() => setMapMode('standard')} 
             className={`px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors ${mapMode === 'standard' ? 'bg-indigo-600 text-white' : 'hover:bg-slate-50 text-slate-600'}`}
