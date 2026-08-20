@@ -18,6 +18,11 @@ const getTownKey = (feature) => {
   return 'Unknown';
 };
 
+const normalizeRdt = (val) => {
+  if (!val) return '';
+  return val.replace(/^Node\s+/i, '').trim();
+};
+
 export default function MapRoute() {
   const { entries } = useAppContext();
   const [geoData, setGeoData] = useState(null);
@@ -29,11 +34,6 @@ export default function MapRoute() {
     const completedHH = new Set();
     const segments = [];
     if (!entries || !geoData) return { completedHandholes: completedHH, completedSegments: segments };
-
-    const normalizeRdt = (val) => {
-      if (!val) return '';
-      return val.replace(/^Node\s+/i, '').trim();
-    };
 
     // 1. Build indexes of the GeoJSON data for quick lookup
     const pointsMap = new Map(); // key: "Town_Csa_Route_Loc"
