@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { MapContainer, TileLayer, GeoJSON, Polyline, Marker, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, GeoJSON, Polyline, Marker, CircleMarker, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Layers, CheckCircle, Search, X, Info, MapPin } from 'lucide-react';
 import L from 'leaflet';
@@ -293,23 +293,19 @@ const MapSearch = ({ geoData, entries, completedSegments, setShowLegend }) => {
     return null;
   };
 
-const INSPECTOR_COLORS = [
-  '#ef4444', '#3b82f6', '#f59e0b', '#10b981', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316'
-];
-
 export default function MapRoute() {
   const { entries } = useAppContext();
   const [geoData, setGeoData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showLegend, setShowLegend] = useState(true);
-  const [mapMode, setMapMode] = useState('standard'); // 'standard' | 'inspector'
+  const [mapMode, setMapMode] = useState('standard'); // 'standard' | 'annotated'
 
   // Pre-calculate indexes and completed segments for fast rendering
-  const { completedHandholes, completedSegments, inspectorColors } = useMemo(() => {
+  const { completedHandholes, completedSegments } = useMemo(() => {
     const completedHH = new Set();
     const segments = [];
-    if (!entries || !geoData) return { completedHandholes: completedHH, completedSegments: segments, inspectorColors: new Map() };
+    if (!entries || !geoData) return { completedHandholes: completedHH, completedSegments: segments,  };
 
     // 1. Build indexes of the GeoJSON data for quick lookup
     const pointsMap = new Map(); // key: "Town_Csa_Route_Loc"
@@ -333,8 +329,7 @@ export default function MapRoute() {
 
     // 2. Process Accepted entries
     const hhEntries = new Map(); // key: hhKey, value: { duct: [], fiber: [] }
-    const iColors = new Map();
-    let colorIdx = 0;
+    
 
     entries.forEach(entry => {
       if (entry.status === 'Accepted' && entry.taskType !== 'Drop') {
@@ -345,10 +340,7 @@ export default function MapRoute() {
         const hhKey = `${town}_${rdt}_${route}_${loc}`;
         const inspector = entry.inspector || 'Unknown';
         
-        if (!iColors.has(inspector)) {
-          iColors.set(inspector, INSPECTOR_COLORS[colorIdx % INSPECTOR_COLORS.length]);
-          colorIdx++;
-        }
+        
         
         if (entry.taskType === 'Hand Hole') {
           completedHH.add(hhKey);
@@ -363,7 +355,7 @@ export default function MapRoute() {
             const enrichedEntry = {
               ...entry,
               ft: ft,
-              inspectorColor: iColors.get(inspector),
+              
               sortTime: new Date(entry.created_at || entry.date).getTime(),
               boreNum: parseInt(entry.boreNumber) || 999 
             };
@@ -474,7 +466,7 @@ export default function MapRoute() {
       }
     }
     
-    return { completedHandholes: completedHH, completedSegments: segments, inspectorColors: iColors };
+    return { completedHandholes: completedHH, completedSegments: segments,  };
   }, [entries, geoData]);
 
   useEffect(() => {
@@ -615,11 +607,9 @@ export default function MapRoute() {
             Standard View
           </button>
           <button 
-            onClick={() => setMapMode('inspector')} 
-            className={`px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors ${mapMode === 'inspector' ? 'bg-indigo-600 text-white' : 'hover:bg-slate-50 text-slate-600'}`}
-          >
-            Inspector View
-          </button>
+            onClick={() => setMapMode('annotated')} 
+            className={`px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors ${mapMode === 'annotated' ? 'bg-indigo-600 text-white' : 'hover:bg-slate-50 text-slate-600'}`}
+          > Annotated View </button>
         </div>
 
         <MapContainer 
@@ -639,7 +629,7 @@ export default function MapRoute() {
               
               {/* Highlighted Completed Route Segments */}
               {completedSegments.map(seg => {
-                const strokeColor = mapMode === 'inspector' ? (seg.inspectorColor || '#333333') : seg.standardColor;
+                const strokeColor = seg.standardColor;
                 
                 return (
                   <Polyline 
@@ -650,9 +640,9 @@ export default function MapRoute() {
                 );
               })}
 
-              {/* Red Pen Annotations (Inspector View Only) */}
-              {mapMode === 'inspector' && completedSegments.filter(s => s.type === 'duct' || s.type === 'fiber').map(seg => {
-                if (!seg.inspector || !seg.date || !seg.midCoord) return null;
+              {/* Red Pen Annotations (Annotated View Only) */}
+              {mapMode === 'annotated' && completedSegments.filter(s => s.type === 'duct' || s.type === 'fiber').map(seg => {
+                if (!seg.inspector || !seg.date || !seg.midCoord || !seg.positions || seg.positions.length === 0) return null;
                 const d = new Date(seg.date);
                 const dateStr = `${d.getMonth()+1}-${d.getDate()}-${String(d.getFullYear()).slice(-2)}`;
                 
@@ -666,13 +656,19 @@ export default function MapRoute() {
                   iconAnchor: [0, 100] // anchors the bottom-left corner of the container to the point
                 });
 
+                const startPos = seg.positions[0];
+                const endPos = seg.positions[seg.positions.length - 1];
+
                 return (
-                  <Marker 
-                    key={`pen-${seg.key}`} 
-                    position={seg.midCoord} 
-                    icon={icon} 
-                    zIndexOffset={1000}
-                  />
+                  <React.Fragment key={`pen-group-${seg.key}`}>
+                    <Marker 
+                      position={seg.midCoord} 
+                      icon={icon} 
+                      zIndexOffset={1000}
+                    />
+                    <CircleMarker center={startPos} radius={3} pathOptions={{ color: '#dc2626', fillColor: '#ef4444', fillOpacity: 1 }} />
+                    <CircleMarker center={endPos} radius={3} pathOptions={{ color: '#dc2626', fillColor: '#ef4444', fillOpacity: 1 }} />
+                  </React.Fragment>
                 );
               })}
 
