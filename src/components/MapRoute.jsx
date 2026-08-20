@@ -332,13 +332,13 @@ export default function MapRoute() {
     });
 
     // 2. Process Accepted entries
-    const segmentFootages = new Map(); // key: hhKey, value: { duct: 0, fiber: 0, inspectors: {}, lastDate: null }
+    const hhEntries = new Map(); // key: hhKey, value: { duct: [], fiber: [] }
     const iColors = new Map();
     let colorIdx = 0;
 
     entries.forEach(entry => {
       if (entry.status === 'Accepted' && entry.taskType !== 'Drop') {
-        const town = entry.town || 'Shidler'; // Default to Shidler for older logs
+        const town = entry.town || 'Shidler';
         const rdt = normalizeRdt(entry.rdtSection);
         const route = entry.route ? String(entry.route).replace('Route ', '') : '';
         const loc = entry.location;
@@ -355,49 +355,45 @@ export default function MapRoute() {
         } else {
           const ft = parseFloat(entry.footage) || 0;
           if (ft > 0) {
-            if (!segmentFootages.has(hhKey)) {
-              segmentFootages.set(hhKey, { duct: 0, fiber: 0, inspectors: {}, lastDate: null });
+            if (!hhEntries.has(hhKey)) {
+              hhEntries.set(hhKey, { duct: [], fiber: [] });
             }
-            const currentFt = segmentFootages.get(hhKey);
+            const group = hhEntries.get(hhKey);
+            
+            const enrichedEntry = {
+              ...entry,
+              ft: ft,
+              inspectorColor: iColors.get(inspector),
+              sortTime: new Date(entry.created_at || entry.date).getTime(),
+              boreNum: parseInt(entry.boreNumber) || 999 
+            };
+            
             if (entry.taskType === 'Fiber') {
-              currentFt.fiber += ft;
+              group.fiber.push(enrichedEntry);
             } else {
-              currentFt.duct += ft;
-            }
-            
-            // Track inspector dominance
-            currentFt.inspectors[inspector] = (currentFt.inspectors[inspector] || 0) + ft;
-            
-            // Track most recent date
-            if (!currentFt.lastDate || new Date(entry.date) > new Date(currentFt.lastDate)) {
-              currentFt.lastDate = entry.date;
+              group.duct.push(enrichedEntry);
             }
           }
         }
       }
     });
 
-    // Determine primary inspector for each segment
-    segmentFootages.forEach(data => {
-      let maxFt = 0;
-      let primary = null;
-      for (const [insp, ft] of Object.entries(data.inspectors)) {
-        if (ft > maxFt) {
-          maxFt = ft;
-          primary = insp;
-        }
-      }
-      data.primaryInspector = primary;
+    // Sort arrays sequentially so they draw in order
+    hhEntries.forEach(group => {
+       group.duct.sort((a, b) => {
+         if (a.boreNum !== b.boreNum) return a.boreNum - b.boreNum;
+         return a.sortTime - b.sortTime;
+       });
+       group.fiber.sort((a, b) => a.sortTime - b.sortTime);
     });
     
-    // 3. Render Route Lines dynamically based on cumulative footage
-    for (const [hhKey, totalFt] of segmentFootages.entries()) {
+    // 3. Render Route Lines dynamically by chunking end-to-end
+    for (const [hhKey, group] of hhEntries.entries()) {
       const [town, rdt, route, loc] = hhKey.split('_');
       const routeLines = linesMap.get(`${town}_${rdt}_${route}`);
       const endPoint = pointsMap.get(hhKey);
       
       if (routeLines && routeLines.length > 0 && endPoint) {
-        // Find the specific line segment that this handhole sits on
         let routeLine = routeLines[0];
         if (routeLines.length > 1) {
           let minD = Infinity;
@@ -410,7 +406,6 @@ export default function MapRoute() {
           });
         }
 
-        // Find the Start Point (previous location, or start of the line if Loc 1)
         let startPoint = null;
         const prevLocStr = String(parseInt(loc, 10) - 1);
         if (pointsMap.has(`${town}_${rdt}_${route}_${prevLocStr}`)) {
@@ -420,67 +415,61 @@ export default function MapRoute() {
         }
         
         try {
-          // Slice the full physical line segment between the two locations
           const fullSegment = turf.lineSlice(startPoint, endPoint, routeLine);
           const fullLengthFt = turf.length(fullSegment, {units: 'feet'});
           
-          if (totalFt.duct > 0) {
-            let ductSegment = fullSegment;
-            if (totalFt.duct < (fullLengthFt - 15)) {
-              ductSegment = turf.lineSliceAlong(fullSegment, 0, totalFt.duct, {units: 'feet'});
-            }
-            const ductLatLngs = ductSegment.geometry.coordinates.map(coord => [coord[1], coord[0]]);
-            segments.push({ 
-              key: hhKey + '_duct', 
-              positions: ductLatLngs, 
-              color: '#22c55e', 
-              primaryInspector: totalFt.primaryInspector, 
-              lastDate: totalFt.lastDate,
-              endCoord: [endPoint.geometry.coordinates[1], endPoint.geometry.coordinates[0]],
-              type: 'duct'
-            }); // Green
-          }
+          let currentDuctFt = 0;
+          group.duct.forEach((entry, idx) => {
+            if (currentDuctFt >= fullLengthFt) return;
+            const startFt = currentDuctFt;
+            let endFt = currentDuctFt + entry.ft;
+            if (endFt > fullLengthFt) endFt = fullLengthFt; // Clamp to total physical length
+            
+            try {
+              const chunkSegment = turf.lineSliceAlong(fullSegment, startFt, endFt, {units: 'feet'});
+              const latLngs = chunkSegment.geometry.coordinates.map(coord => [coord[1], coord[0]]);
+              const midCoord = latLngs[Math.floor(latLngs.length / 2)];
+              segments.push({
+                key: `${hhKey}_duct_${entry.id || idx}`,
+                positions: latLngs,
+                standardColor: '#22c55e',
+                inspectorColor: entry.inspectorColor,
+                inspector: entry.inspector,
+                date: entry.date,
+                midCoord: midCoord,
+                type: 'duct'
+              });
+            } catch (err) {}
+            currentDuctFt = endFt;
+          });
           
-          if (totalFt.fiber > 0) {
-            let fiberSegment = fullSegment;
-            if (totalFt.fiber < (fullLengthFt - 15)) {
-              fiberSegment = turf.lineSliceAlong(fullSegment, 0, totalFt.fiber, {units: 'feet'});
-            }
-            const fiberLatLngs = fiberSegment.geometry.coordinates.map(coord => [coord[1], coord[0]]);
-            segments.push({ 
-              key: hhKey + '_fiber', 
-              positions: fiberLatLngs, 
-              color: '#a855f7',
-              primaryInspector: totalFt.primaryInspector,
-              lastDate: totalFt.lastDate,
-              endCoord: [endPoint.geometry.coordinates[1], endPoint.geometry.coordinates[0]],
-              type: 'fiber'
-            }); // Purple
-          }
+          let currentFiberFt = 0;
+          group.fiber.forEach((entry, idx) => {
+            if (currentFiberFt >= fullLengthFt) return;
+            const startFt = currentFiberFt;
+            let endFt = currentFiberFt + entry.ft;
+            if (endFt > fullLengthFt) endFt = fullLengthFt;
+            
+            try {
+              const chunkSegment = turf.lineSliceAlong(fullSegment, startFt, endFt, {units: 'feet'});
+              const latLngs = chunkSegment.geometry.coordinates.map(coord => [coord[1], coord[0]]);
+              const midCoord = latLngs[Math.floor(latLngs.length / 2)];
+              segments.push({
+                key: `${hhKey}_fiber_${entry.id || idx}`,
+                positions: latLngs,
+                standardColor: '#a855f7',
+                inspectorColor: entry.inspectorColor,
+                inspector: entry.inspector,
+                date: entry.date,
+                midCoord: midCoord,
+                type: 'fiber'
+              });
+            } catch (err) {}
+            currentFiberFt = endFt;
+          });
+          
         } catch (err) {
           console.warn("Could not slice line segment for", hhKey, err);
-          const startCoords = startPoint.geometry.coordinates;
-          const endCoords = endPoint.geometry.coordinates;
-          const fallbackPositions = [[startCoords[1], startCoords[0]], [endCoords[1], endCoords[0]]];
-          
-          if (totalFt.duct > 0) segments.push({ 
-            key: hhKey + '_duct', 
-            positions: fallbackPositions, 
-            color: '#22c55e',
-            primaryInspector: totalFt.primaryInspector,
-            lastDate: totalFt.lastDate,
-            endCoord: [endCoords[1], endCoords[0]],
-            type: 'duct'
-          });
-          if (totalFt.fiber > 0) segments.push({ 
-            key: hhKey + '_fiber', 
-            positions: fallbackPositions, 
-            color: '#a855f7',
-            primaryInspector: totalFt.primaryInspector,
-            lastDate: totalFt.lastDate,
-            endCoord: [endCoords[1], endCoords[0]],
-            type: 'fiber'
-          });
         }
       }
     }
@@ -650,12 +639,8 @@ export default function MapRoute() {
               
               {/* Highlighted Completed Route Segments */}
               {completedSegments.map(seg => {
-                let strokeColor = seg.color;
-                if (mapMode === 'inspector' && seg.primaryInspector) {
-                  strokeColor = inspectorColors.get(seg.primaryInspector) || '#333333';
-                }
+                const strokeColor = mapMode === 'inspector' ? (seg.inspectorColor || '#333333') : seg.standardColor;
                 
-                // If in inspector mode, we might want to offset or change styles, but color is the main thing
                 return (
                   <Polyline 
                     key={`highlight-${seg.key}`}
@@ -667,15 +652,15 @@ export default function MapRoute() {
 
               {/* Red Pen Annotations (Inspector View Only) */}
               {mapMode === 'inspector' && completedSegments.filter(s => s.type === 'duct' || s.type === 'fiber').map(seg => {
-                if (!seg.primaryInspector || !seg.lastDate || !seg.endCoord) return null;
-                const d = new Date(seg.lastDate);
+                if (!seg.inspector || !seg.date || !seg.midCoord) return null;
+                const d = new Date(seg.date);
                 const dateStr = `${d.getMonth()+1}-${d.getDate()}-${String(d.getFullYear()).slice(-2)}`;
                 
                 const icon = L.divIcon({
                   className: 'red-pen-label',
                   html: `<div class="red-pen-container">
                            <div class="red-pen-line"></div>
-                           <div class="red-pen-text">${seg.primaryInspector}<br/>${dateStr}</div>
+                           <div class="red-pen-text">${seg.inspector}<br/>${dateStr}</div>
                          </div>`,
                   iconSize: [150, 100],
                   iconAnchor: [0, 100] // anchors the bottom-left corner of the container to the point
@@ -684,7 +669,7 @@ export default function MapRoute() {
                 return (
                   <Marker 
                     key={`pen-${seg.key}`} 
-                    position={seg.endCoord} 
+                    position={seg.midCoord} 
                     icon={icon} 
                     zIndexOffset={1000}
                   />
