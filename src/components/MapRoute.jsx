@@ -249,7 +249,7 @@ export default function MapRoute() {
   };
 
   // Component for searching and flying the map to a specific location
-  const MapSearch = ({ geoData, entries }) => {
+  const MapSearch = ({ geoData, entries, completedSegments }) => {
     const map = useMap();
     const [isMinimized, setIsMinimized] = useState(false);
     const [searchTown, setSearchTown] = useState('Shidler');
@@ -316,6 +316,28 @@ export default function MapRoute() {
       setSearchRdt(latestAccepted.rdtSection);
       setSearchRoute(tRoute);
       setSearchLoc(tLoc);
+
+      // Attempt 1: If it's a line segment (duct or fiber), zoom precisely to the newly rendered line!
+      if (completedSegments && completedSegments.length > 0) {
+        const targetHhKey = `${tTown}_${tRdt}_${tRoute}_${tLoc}`;
+        const relevantSegments = completedSegments.filter(s => s.key === targetHhKey || s.key.startsWith(targetHhKey + '_'));
+        
+        if (relevantSegments.length > 0) {
+          const allLatLngs = [];
+          relevantSegments.forEach(seg => {
+            if (seg.positions) seg.positions.forEach(pos => allLatLngs.push(pos));
+          });
+          
+          if (allLatLngs.length > 0) {
+            const polyline = L.polyline(allLatLngs);
+            const bounds = polyline.getBounds();
+            if (bounds.isValid()) {
+              map.fitBounds(bounds, { padding: [50, 50], maxZoom: 18, duration: 1.5 });
+              return;
+            }
+          }
+        }
+      }
       
       const matchedFeatures = geoData.features.filter(f => {
         const p = f.properties || {};
@@ -556,7 +578,7 @@ export default function MapRoute() {
               ))}
 
               <FitBounds data={geoData} />
-              <MapSearch geoData={geoData} entries={entries} />
+              <MapSearch geoData={geoData} entries={entries} completedSegments={completedSegments} />
             </>
           )}
         </MapContainer>
