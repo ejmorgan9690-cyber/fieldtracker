@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { useAppContext, formatDate } from '../context/AppContext';
-import { CheckCircle, X, Search, Image as ImageIcon } from 'lucide-react';
+import { CheckCircle, X, Search, Image as ImageIcon, AlertCircle } from 'lucide-react';
 
 export default function PendingReview() {
-  const { entries, redlines, verifyEntry } = useAppContext();
+  const { entries, redlines, verifyEntry, rejectEntry } = useAppContext();
   const [selectedEntry, setSelectedEntry] = useState(null);
 
   // Filter logs that are pending
-  const pendingLogs = entries.filter(e => e.status !== 'Accepted');
+  const pendingLogs = entries.filter(e => e.status !== 'Accepted' && e.status !== 'Rejected');
 
   // Find matching redlines for the selected entry
   const matchingRedlines = selectedEntry 
@@ -17,6 +17,13 @@ export default function PendingReview() {
   const handleVerify = async () => {
     if (selectedEntry) {
       await verifyEntry(selectedEntry.id);
+      setSelectedEntry(null);
+    }
+  };
+
+  const handleReject = async () => {
+    if (selectedEntry) {
+      await rejectEntry(selectedEntry.id);
       setSelectedEntry(null);
     }
   };
@@ -172,19 +179,26 @@ export default function PendingReview() {
 
             </div>
 
-            <div className="p-6 border-t border-slate-100 bg-white flex justify-end space-x-4">
+            <div className="p-6 border-t border-slate-100 bg-white flex justify-end space-x-3 sm:space-x-4">
               <button 
                 onClick={() => setSelectedEntry(null)}
-                className="px-6 py-3 font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+                className="px-4 sm:px-6 py-3 font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
               >
                 Cancel
               </button>
               <button 
+                onClick={handleReject}
+                className="px-4 sm:px-6 py-3 font-bold text-white bg-red-600 hover:bg-red-700 shadow-md hover:shadow-lg rounded-xl transition-all flex items-center"
+              >
+                <X className="h-5 w-5 mr-2" />
+                Decline Log
+              </button>
+              <button 
                 onClick={handleVerify}
-                className="px-8 py-3 font-bold text-white bg-green-600 hover:bg-green-700 shadow-md hover:shadow-lg rounded-xl transition-all flex items-center"
+                className="px-4 sm:px-8 py-3 font-bold text-white bg-green-600 hover:bg-green-700 shadow-md hover:shadow-lg rounded-xl transition-all flex items-center"
               >
                 <CheckCircle className="h-5 w-5 mr-2" />
-                Accept & Verify Log
+                Accept & Verify
               </button>
             </div>
           </div>

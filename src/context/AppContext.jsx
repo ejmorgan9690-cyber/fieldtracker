@@ -282,6 +282,19 @@ export const AppProvider = ({ children }) => {
     }
   };
 
+  const rejectEntry = async (id) => {
+    try {
+      const { error } = await supabase.from('production_logs').update({ status: 'Rejected' }).eq('id', id);
+      if (error) console.error("Error rejecting entry:", error);
+      
+      const newEntries = entries.map(e => e.id === id ? { ...e, status: 'Rejected' } : e);
+      setEntries(newEntries);
+      localStorage.setItem('fieldTrackerEntries', JSON.stringify(newEntries));
+    } catch (err) {
+      console.error("Error in rejectEntry:", err);
+    }
+  };
+
   const deleteEntry = async (id) => {
     try {
       await supabase.from('production_logs').delete().eq('id', id);
@@ -363,7 +376,7 @@ export const AppProvider = ({ children }) => {
   return (
     <AppContext.Provider value={{ 
       authUser, login, logout, register,
-      entries, addEntry, deleteEntry, verifyEntry,
+      entries, addEntry, deleteEntry, verifyEntry, rejectEntry,
       dailies, addDaily, deleteDaily,
       gigs, addGig, deleteGig,
       redlines, addRedline, deleteRedline,
