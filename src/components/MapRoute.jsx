@@ -57,13 +57,13 @@ export default function MapRoute() {
     });
 
     // 2. Process Accepted entries
-    const segmentFootage = new Map(); // key: hhKey, value: cumulative footage
+    const segmentFootages = new Map(); // key: hhKey, value: { duct: 0, fiber: 0 }
 
     entries.forEach(entry => {
       if (entry.status === 'Accepted' && entry.taskType !== 'Drop') {
         const town = entry.town || 'Shidler'; // Default to Shidler for older logs
         const rdt = normalizeRdt(entry.rdtSection);
-        const route = entry.route ? entry.route.replace('Route ', '') : '';
+        const route = entry.route ? String(entry.route).replace('Route ', '') : '';
         const loc = entry.location;
         const hhKey = `${town}_${rdt}_${route}_${loc}`;
         
@@ -74,15 +74,22 @@ export default function MapRoute() {
           // For routes (Bore, Plow, Fiber), calculate cumulative footage
           const ft = parseFloat(entry.footage) || 0;
           if (ft > 0) {
-            const currentFt = segmentFootage.get(hhKey) || 0;
-            segmentFootage.set(hhKey, currentFt + ft);
+            if (!segmentFootages.has(hhKey)) {
+              segmentFootages.set(hhKey, { duct: 0, fiber: 0 });
+            }
+            const currentFt = segmentFootages.get(hhKey);
+            if (entry.taskType === 'Fiber') {
+              currentFt.fiber += ft;
+            } else {
+              currentFt.duct += ft;
+            }
           }
         }
       }
     });
     
     // 3. Render Route Lines dynamically based on cumulative footage
-    for (const [hhKey, totalFt] of segmentFootage.entries()) {
+    for (const [hhKey, totalFt] of segmentFootages.entries()) {
       const [town, rdt, route, loc] = hhKey.split('_');
       const routeLines = linesMap.get(`${town}_${rdt}_${route}`);
       const endPoint = pointsMap.get(hhKey);
@@ -115,22 +122,31 @@ export default function MapRoute() {
           const fullSegment = turf.lineSlice(startPoint, endPoint, routeLine);
           const fullLengthFt = turf.length(fullSegment, {units: 'feet'});
           
-          let renderSegment = fullSegment;
-          
-          // Partial Route Highlighting!
-          // If the logged footage is less than the physical length, cut it short.
-          // Buffer of 15 feet prevents tiny visually missing gaps if measurements slightly mismatch.
-          if (totalFt < (fullLengthFt - 15)) {
-            renderSegment = turf.lineSliceAlong(fullSegment, 0, totalFt, {units: 'feet'});
+          if (totalFt.duct > 0) {
+            let ductSegment = fullSegment;
+            if (totalFt.duct < (fullLengthFt - 15)) {
+              ductSegment = turf.lineSliceAlong(fullSegment, 0, totalFt.duct, {units: 'feet'});
+            }
+            const ductLatLngs = ductSegment.geometry.coordinates.map(coord => [coord[1], coord[0]]);
+            segments.push({ key: hhKey + '_duct', positions: ductLatLngs, color: '#22c55e' }); // Green
           }
           
-          const latLngs = renderSegment.geometry.coordinates.map(coord => [coord[1], coord[0]]);
-          segments.push({ key: hhKey, positions: latLngs });
+          if (totalFt.fiber > 0) {
+            let fiberSegment = fullSegment;
+            if (totalFt.fiber < (fullLengthFt - 15)) {
+              fiberSegment = turf.lineSliceAlong(fullSegment, 0, totalFt.fiber, {units: 'feet'});
+            }
+            const fiberLatLngs = fiberSegment.geometry.coordinates.map(coord => [coord[1], coord[0]]);
+            segments.push({ key: hhKey + '_fiber', positions: fiberLatLngs, color: '#a855f7' }); // Purple
+          }
         } catch (err) {
           console.warn("Could not slice line segment for", hhKey, err);
           const startCoords = startPoint.geometry.coordinates;
           const endCoords = endPoint.geometry.coordinates;
-          segments.push({ key: hhKey, positions: [[startCoords[1], startCoords[0]], [endCoords[1], endCoords[0]]] });
+          const fallbackPositions = [[startCoords[1], startCoords[0]], [endCoords[1], endCoords[0]]];
+          
+          if (totalFt.duct > 0) segments.push({ key: hhKey + '_duct', positions: fallbackPositions, color: '#22c55e' });
+          if (totalFt.fiber > 0) segments.push({ key: hhKey + '_fiber', positions: fallbackPositions, color: '#a855f7' });
         }
       }
     }
@@ -535,7 +551,7 @@ export default function MapRoute() {
                 <Polyline 
                   key={`highlight-${seg.key}`}
                   positions={seg.positions} 
-                  pathOptions={{ color: '#22c55e', weight: 8, opacity: 0.8, lineCap: 'round', lineJoin: 'round' }} 
+                  pathOptions={{ color: seg.color, weight: 8, opacity: 0.8, lineCap: 'round', lineJoin: 'round' }} 
                 />
               ))}
 
@@ -570,6 +586,7 @@ export default function MapRoute() {
               </button>
             </div>
             <div className="space-y-2">
+              <div className="flex justify-between items-center text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Handholes</div>
               <div className="flex items-center">
                 <div className="w-3 h-3 bg-black border border-white shadow-sm mr-2"></div>
                 <span className="text-xs font-semibold text-slate-600">Pending / Unlogged</span>
@@ -578,9 +595,19 @@ export default function MapRoute() {
                 <div className="w-3 h-3 bg-green-500 border border-green-600 shadow-sm mr-2"></div>
                 <span className="text-xs font-semibold text-slate-600">Resident Accepted</span>
               </div>
-              <div className="flex items-center mt-2 pt-2 border-t border-slate-100">
-                <div className="w-4 h-1 bg-red-500 mr-2 rounded-full"></div>
-                <span className="text-xs font-semibold text-slate-600">Fiber Route</span>
+              
+              <div className="flex justify-between items-center text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-3 pt-2 border-t border-slate-100 mb-1">Routes</div>
+              <div className="flex items-center">
+                <div className="w-6 h-1 bg-red-500 mr-2 rounded-full opacity-60"></div>
+                <span className="text-xs text-slate-600 font-medium">Planned Route (Unbuilt)</span>
+              </div>
+              <div className="flex items-center">
+                <div className="w-6 h-1.5 bg-green-500 mr-2 rounded-full shadow-sm"></div>
+                <span className="text-xs text-slate-700 font-bold">Completed Duct</span>
+              </div>
+              <div className="flex items-center">
+                <div className="w-6 h-1.5 bg-purple-500 mr-2 rounded-full shadow-sm"></div>
+                <span className="text-xs text-slate-700 font-bold">Completed Fiber</span>
               </div>
             </div>
           </div>
