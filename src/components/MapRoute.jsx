@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { MapContainer, TileLayer, GeoJSON, Polyline, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Layers, CheckCircle } from 'lucide-react';
+import { Layers, CheckCircle, Search, X, Info } from 'lucide-react';
 import L from 'leaflet';
 import { useAppContext } from '../context/AppContext';
 import * as turf from '@turf/turf';
@@ -28,6 +28,7 @@ export default function MapRoute() {
   const [geoData, setGeoData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showLegend, setShowLegend] = useState(true);
 
   // Pre-calculate indexes and completed segments for fast rendering
   const { completedHandholes, completedSegments } = useMemo(() => {
@@ -232,6 +233,7 @@ export default function MapRoute() {
   // Component for searching and flying the map to a specific location
   const MapSearch = ({ geoData, entries }) => {
     const map = useMap();
+    const [isMinimized, setIsMinimized] = useState(false);
     const [searchTown, setSearchTown] = useState('Shidler');
     const [searchRdt, setSearchRdt] = useState('');
     const [searchRoute, setSearchRoute] = useState('');
@@ -350,16 +352,41 @@ export default function MapRoute() {
       }
     };
 
+    if (isMinimized) {
+      return (
+        <button 
+          onClick={() => setIsMinimized(false)}
+          className="absolute top-4 right-4 z-[1000] bg-white/95 backdrop-blur-md p-3 rounded-full shadow-lg border border-slate-200 text-indigo-600 hover:bg-indigo-50 transition-all"
+          title="Open Map Search"
+        >
+          <Search className="w-5 h-5" />
+        </button>
+      );
+    }
+
     return (
-      <div className="absolute top-4 right-4 z-[1000] bg-white/95 backdrop-blur-md p-4 rounded-xl shadow-lg border border-slate-200 w-80">
+      <div className="absolute top-4 right-4 z-[1000] bg-white/95 backdrop-blur-md p-4 rounded-xl shadow-lg border border-slate-200 w-80 max-w-[calc(100vw-2rem)]">
         <div className="flex justify-between items-center border-b border-slate-200 pb-2 mb-3">
-          <h4 className="text-sm font-bold text-slate-800">Location Jump</h4>
-          <button 
-            onClick={handleJumpToLatest}
-            className="text-xs bg-emerald-100 hover:bg-emerald-200 text-emerald-700 font-bold py-1 px-2 rounded transition-colors"
-          >
-            Go to Latest ✔
-          </button>
+          <h4 className="text-sm font-bold text-slate-800 flex items-center">
+            <Search className="w-4 h-4 mr-1.5 text-indigo-600" />
+            Location Jump
+          </h4>
+          <div className="flex items-center space-x-2">
+            <button 
+              onClick={handleJumpToLatest}
+              title="Jump to Latest Log"
+              className="text-xs bg-emerald-100 hover:bg-emerald-200 text-emerald-700 font-bold py-1 px-2 rounded transition-colors flex items-center"
+            >
+              Latest
+            </button>
+            <button 
+              onClick={() => setIsMinimized(true)}
+              className="text-slate-400 hover:text-slate-600 transition-colors bg-slate-100 hover:bg-slate-200 rounded-full p-1"
+              title="Close Panel"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
         <form onSubmit={handleSearch} className="space-y-3">
           <div>
@@ -502,23 +529,45 @@ export default function MapRoute() {
         </MapContainer>
 
         {/* Legend Overlay */}
-        <div className="absolute bottom-6 left-6 z-[1000] bg-white/90 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-slate-200">
-          <h4 className="text-sm font-bold text-slate-800 mb-3 border-b border-slate-200 pb-2">Status Legend</h4>
-          <div className="space-y-2">
-            <div className="flex items-center">
-              <div className="w-3 h-3 bg-black border border-white shadow-sm mr-2"></div>
-              <span className="text-xs font-semibold text-slate-600">Pending / Unlogged</span>
+        {!showLegend ? (
+          <button 
+            onClick={() => setShowLegend(true)}
+            className="absolute bottom-6 left-6 z-[1000] bg-white/90 backdrop-blur-md p-3 rounded-full shadow-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition-all"
+            title="Open Legend"
+          >
+            <Info className="w-5 h-5" />
+          </button>
+        ) : (
+          <div className="absolute bottom-6 left-6 z-[1000] bg-white/90 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-slate-200 max-w-[calc(100vw-2rem)]">
+            <div className="flex justify-between items-center border-b border-slate-200 pb-2 mb-3">
+              <h4 className="text-sm font-bold text-slate-800 flex items-center">
+                <Info className="w-4 h-4 mr-1.5 text-indigo-600" />
+                Status Legend
+              </h4>
+              <button 
+                onClick={() => setShowLegend(false)}
+                className="text-slate-400 hover:text-slate-600 transition-colors bg-slate-100 hover:bg-slate-200 rounded-full p-1 ml-4"
+                title="Close Legend"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
-            <div className="flex items-center">
-              <div className="w-3 h-3 bg-green-500 border border-green-600 shadow-sm mr-2"></div>
-              <span className="text-xs font-semibold text-slate-600">Resident Accepted</span>
-            </div>
-            <div className="flex items-center mt-2 pt-2 border-t border-slate-100">
-              <div className="w-4 h-1 bg-red-500 mr-2 rounded-full"></div>
-              <span className="text-xs font-semibold text-slate-600">Fiber Route</span>
+            <div className="space-y-2">
+              <div className="flex items-center">
+                <div className="w-3 h-3 bg-black border border-white shadow-sm mr-2"></div>
+                <span className="text-xs font-semibold text-slate-600">Pending / Unlogged</span>
+              </div>
+              <div className="flex items-center">
+                <div className="w-3 h-3 bg-green-500 border border-green-600 shadow-sm mr-2"></div>
+                <span className="text-xs font-semibold text-slate-600">Resident Accepted</span>
+              </div>
+              <div className="flex items-center mt-2 pt-2 border-t border-slate-100">
+                <div className="w-4 h-1 bg-red-500 mr-2 rounded-full"></div>
+                <span className="text-xs font-semibold text-slate-600">Fiber Route</span>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
