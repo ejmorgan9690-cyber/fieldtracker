@@ -105,7 +105,7 @@ export const AppProvider = ({ children }) => {
       try {
         const parsedUser = JSON.parse(savedUser);
         setAuthUser(parsedUser);
-        setActiveTab(parsedUser.role === 'Resident' ? 'dashboard' : 'log');
+        setActiveTab(parsedUser.role === 'Resident' ? 'pending_review' : 'log');
       } catch (e) {
         console.error('Failed to parse saved auth:', e);
         localStorage.removeItem('fieldTrackerAuth');
@@ -139,7 +139,7 @@ export const AppProvider = ({ children }) => {
           sessionStorage.setItem('fieldTrackerAuth', JSON.stringify(authPayload));
         }
         
-        setActiveTab(user.role === 'Resident' ? 'dashboard' : 'log');
+        setActiveTab(user.role === 'Resident' ? 'pending_review' : 'log');
         return { success: true };
       } else {
         return { success: false, error: 'Invalid username or password' };
@@ -170,7 +170,7 @@ export const AppProvider = ({ children }) => {
         const authPayload = { id: user.id, name: user.username, role: user.role };
         setAuthUser(authPayload);
         localStorage.setItem('fieldTrackerAuth', JSON.stringify(authPayload));
-        setActiveTab(user.role === 'Resident' ? 'dashboard' : 'log');
+        setActiveTab(user.role === 'Resident' ? 'pending_review' : 'log');
         return { success: true };
       }
       return { success: false, error: 'Unknown error creating account' };
