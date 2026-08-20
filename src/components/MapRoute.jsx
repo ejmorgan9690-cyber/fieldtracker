@@ -462,7 +462,7 @@ export default function MapRoute() {
               let midCoord = latLngs[Math.floor(latLngs.length / 2)];
               
               try {
-                const offset = turf.lineOffset(chunkSegment, 45, {units: 'feet'});
+                const offset = turf.lineOffset(chunkSegment, -35, {units: 'feet'});
                 bracketLine = offset.geometry.coordinates.map(coord => [coord[1], coord[0]]);
                 bracketStart = [latLngs[0], bracketLine[0]];
                 bracketEnd = [latLngs[latLngs.length - 1], bracketLine[bracketLine.length - 1]];
