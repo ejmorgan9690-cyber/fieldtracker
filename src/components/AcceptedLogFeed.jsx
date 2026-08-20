@@ -3,7 +3,7 @@ import { useAppContext, formatDate } from '../context/AppContext';
 import { CheckCircle, Search, Image as ImageIcon } from 'lucide-react';
 
 export default function AcceptedLogFeed() {
-  const { entries, redlines } = useAppContext();
+  const { entries, redlines, deleteEntry } = useAppContext();
   const [filterDate, setFilterDate] = useState('');
   const [filterInspector, setFilterInspector] = useState('');
 
@@ -15,16 +15,22 @@ export default function AcceptedLogFeed() {
     return true;
   }).sort((a, b) => new Date(b.date) - new Date(a.date));
 
+  const handleDelete = (id) => {
+    if (window.confirm("Are you sure you want to permanently delete this accepted log? This will also revert it off the map automatically.")) {
+      deleteEntry(id);
+    }
+  };
+
   return (
     <div className="max-w-6xl mx-auto mt-6">
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 sm:p-8">
         <div className="mb-8 pb-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between">
           <div className="mb-4 sm:mb-0">
-            <h2 className="text-2xl font-bold text-slate-800 tracking-tight flex items-center">
-              <CheckCircle className="h-6 w-6 mr-3 text-green-500" />
-              Verified Logs Feed
+            <h2 className="text-2xl font-black text-slate-800 tracking-tight flex items-center">
+              <CheckCircle className="h-7 w-7 mr-3 text-green-600" />
+              Verified Logs & Redlines
             </h2>
-            <p className="mt-1 text-sm text-slate-500 font-medium">Complete history of all logs you have verified, including redline images.</p>
+            <p className="mt-1 text-sm text-slate-500 font-medium">View and verify the completed production log feed.</p>
           </div>
           
           <div className="flex flex-wrap gap-3">
@@ -34,7 +40,7 @@ export default function AcceptedLogFeed() {
                 type="date" 
                 value={filterDate}
                 onChange={(e) => setFilterDate(e.target.value)}
-                className="block w-full text-sm px-3 py-2 border border-slate-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
+                className="block w-full text-sm px-3 py-2 border border-slate-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 font-medium"
               />
             </div>
             <div>
@@ -42,7 +48,7 @@ export default function AcceptedLogFeed() {
               <select 
                 value={filterInspector}
                 onChange={(e) => setFilterInspector(e.target.value)}
-                className="block w-full text-sm px-3 py-2 border border-slate-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+                className="block w-full text-sm px-3 py-2 border border-slate-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-white font-medium"
               >
                 <option value="">All Inspectors</option>
                 {[...new Set(entries.map(e => e.inspector))].filter(Boolean).sort().map(insp => (
@@ -54,7 +60,7 @@ export default function AcceptedLogFeed() {
         </div>
 
         {acceptedLogs.length > 0 ? (
-          <div className="space-y-8">
+          <div className="grid grid-cols-1 gap-6">
             {acceptedLogs.map(log => {
               const matchingRedlines = redlines.filter(r => r.psNumber === log.psNumber);
               
@@ -68,6 +74,13 @@ export default function AcceptedLogFeed() {
                           VERIFIED
                         </span>
                       </div>
+                      <button 
+                        onClick={() => handleDelete(log.id)}
+                        className="text-xs bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 font-bold py-1 px-2 rounded border border-red-100 transition-colors"
+                        title="Delete this accepted log and revert it from the map"
+                      >
+                        Delete Log
+                      </button>
                     </div>
                     
                     <div className="space-y-4">
