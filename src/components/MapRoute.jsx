@@ -56,56 +56,83 @@ export default function MapRoute() {
     });
 
     // 2. Process Accepted entries
+    const segmentFootage = new Map(); // key: hhKey, value: cumulative footage
+
     entries.forEach(entry => {
       if (entry.status === 'Accepted' && entry.taskType !== 'Drop') {
         const town = entry.town || 'Shidler'; // Default to Shidler for older logs
         const rdt = normalizeRdt(entry.rdtSection);
         const route = entry.route ? entry.route.replace('Route ', '') : '';
         const loc = entry.location;
-        
         const hhKey = `${town}_${rdt}_${route}_${loc}`;
-        completedHH.add(hhKey);
         
-        const routeLines = linesMap.get(`${town}_${rdt}_${route}`);
-        const endPoint = pointsMap.get(hhKey);
-        
-        if (routeLines && routeLines.length > 0 && endPoint) {
-          // Find the specific line segment that this handhole sits on
-          let routeLine = routeLines[0];
-          if (routeLines.length > 1) {
-            let minD = Infinity;
-            routeLines.forEach(l => {
-              const d = turf.pointToLineDistance(endPoint, l);
-              if (d < minD) {
-                minD = d;
-                routeLine = l;
-              }
-            });
-          }
-            // Find the Start Point (previous location, or start of the line if Loc 1)
-            let startPoint = null;
-            const prevLocStr = String(parseInt(loc, 10) - 1);
-            if (pointsMap.has(`${town}_${rdt}_${route}_${prevLocStr}`)) {
-              startPoint = pointsMap.get(`${town}_${rdt}_${route}_${prevLocStr}`);
-            } else {
-              // If no previous handhole, start from the very beginning of the Route Line
-              startPoint = turf.point(routeLine.geometry.coordinates[0]);
-            }
-            
-            try {
-              // Slice the line along the actual road curves using Turf!
-              const sliced = turf.lineSlice(startPoint, endPoint, routeLine);
-              const latLngs = sliced.geometry.coordinates.map(coord => [coord[1], coord[0]]);
-              segments.push({ key: hhKey, positions: latLngs });
-            } catch (err) {
-              console.warn("Could not slice line segment for", hhKey, err);
-              const startCoords = startPoint.geometry.coordinates;
-              const endCoords = endPoint.geometry.coordinates;
-              segments.push({ key: hhKey, positions: [[startCoords[1], startCoords[0]], [endCoords[1], endCoords[0]]] });
-            }
+        if (entry.taskType === 'Hand Hole') {
+          // ONLY highlight the handhole icon if they specifically logged a Hand Hole
+          completedHH.add(hhKey);
+        } else {
+          // For routes (Bore, Plow, Fiber), calculate cumulative footage
+          const ft = parseFloat(entry.footage) || 0;
+          if (ft > 0) {
+            const currentFt = segmentFootage.get(hhKey) || 0;
+            segmentFootage.set(hhKey, currentFt + ft);
           }
         }
+      }
     });
+    
+    // 3. Render Route Lines dynamically based on cumulative footage
+    for (const [hhKey, totalFt] of segmentFootage.entries()) {
+      const [town, rdt, route, loc] = hhKey.split('_');
+      const routeLines = linesMap.get(`${town}_${rdt}_${route}`);
+      const endPoint = pointsMap.get(hhKey);
+      
+      if (routeLines && routeLines.length > 0 && endPoint) {
+        // Find the specific line segment that this handhole sits on
+        let routeLine = routeLines[0];
+        if (routeLines.length > 1) {
+          let minD = Infinity;
+          routeLines.forEach(l => {
+            const d = turf.pointToLineDistance(endPoint, l);
+            if (d < minD) {
+              minD = d;
+              routeLine = l;
+            }
+          });
+        }
+
+        // Find the Start Point (previous location, or start of the line if Loc 1)
+        let startPoint = null;
+        const prevLocStr = String(parseInt(loc, 10) - 1);
+        if (pointsMap.has(`${town}_${rdt}_${route}_${prevLocStr}`)) {
+          startPoint = pointsMap.get(`${town}_${rdt}_${route}_${prevLocStr}`);
+        } else {
+          startPoint = turf.point(routeLine.geometry.coordinates[0]);
+        }
+        
+        try {
+          // Slice the full physical line segment between the two locations
+          const fullSegment = turf.lineSlice(startPoint, endPoint, routeLine);
+          const fullLengthFt = turf.length(fullSegment, {units: 'feet'});
+          
+          let renderSegment = fullSegment;
+          
+          // Partial Route Highlighting!
+          // If the logged footage is less than the physical length, cut it short.
+          // Buffer of 15 feet prevents tiny visually missing gaps if measurements slightly mismatch.
+          if (totalFt < (fullLengthFt - 15)) {
+            renderSegment = turf.lineSliceAlong(fullSegment, 0, totalFt, {units: 'feet'});
+          }
+          
+          const latLngs = renderSegment.geometry.coordinates.map(coord => [coord[1], coord[0]]);
+          segments.push({ key: hhKey, positions: latLngs });
+        } catch (err) {
+          console.warn("Could not slice line segment for", hhKey, err);
+          const startCoords = startPoint.geometry.coordinates;
+          const endCoords = endPoint.geometry.coordinates;
+          segments.push({ key: hhKey, positions: [[startCoords[1], startCoords[0]], [endCoords[1], endCoords[0]]] });
+        }
+      }
+    }
     
     return { completedHandholes: completedHH, completedSegments: segments };
   }, [entries, geoData]);
