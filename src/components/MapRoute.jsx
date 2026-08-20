@@ -182,10 +182,12 @@ export default function MapRoute() {
       // Check if this specific handhole is completed
       // The KML properties: Csa (e.g. 'RDT1'), Rt__no_ (e.g. '3C'), Loc__no_ (e.g. '1')
       const town = getTownKey(feature);
-      const csa = p.Csa ? p.Csa.replace(/^Node\s+/i, '').trim() : '';
-      const rt = p.Rt__no_ || '';
+      const csa = normalizeRdt(p.Csa);
+      const rts = p.Rt__no_ ? String(p.Rt__no_).split(/[\/,&]/).map(s => s.trim()) : [''];
       const loc = p.Loc__no_ || '';
-      const isCompleted = completedHandholes.has(`${town}_${csa}_${rt}_${loc}`);
+      
+      // If the handhole is shared (e.g., Rt__no_ is "1/3"), check if any of the routes are completed
+      const isCompleted = rts.some(rt => completedHandholes.has(`${town}_${csa}_${rt}_${loc}`));
       
       const bgColor = isCompleted ? '#22c55e' : 'black'; // Green if completed, black if pending
       const borderColor = isCompleted ? '#16a34a' : 'white';
