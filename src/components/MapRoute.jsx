@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { MapContainer, TileLayer, GeoJSON, Polyline, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Layers, CheckCircle, Search, X, Info } from 'lucide-react';
+import { Layers, CheckCircle, Search, X, Info, MapPin } from 'lucide-react';
 import L from 'leaflet';
 import { useAppContext } from '../context/AppContext';
 import * as turf from '@turf/turf';
@@ -257,12 +257,15 @@ export default function MapRoute() {
         if (csaPoint) rdts.add(csaPoint);
         if (csaLine) rdts.add(csaLine);
 
-        if (searchRdt && (csaPoint === searchRdt || csaLine === searchRdt)) {
-          if (p.Rt__no_) routes.add(p.Rt__no_);
-          if (p.Route) routes.add(p.Route);
+        const rdtMatch = searchRdt && (normalizeRdt(csaPoint) === normalizeRdt(searchRdt) || normalizeRdt(csaLine) === normalizeRdt(searchRdt));
+        if (rdtMatch) {
+          const pRoutesPoint = p.Rt__no_ ? String(p.Rt__no_).split(/[\/,&]/).map(s => s.trim()) : [];
+          const pRoutesLine = p.Route ? String(p.Route).split(/[\/,&]/).map(s => s.trim()) : [];
+          pRoutesPoint.forEach(r => routes.add(r));
+          pRoutesLine.forEach(r => routes.add(r));
           
-          if (searchRoute && (p.Rt__no_ === searchRoute || p.Route === searchRoute)) {
-            if (p.Loc__no_) locs.add(p.Loc__no_);
+          if (searchRoute && (pRoutesPoint.includes(String(searchRoute)) || pRoutesLine.includes(String(searchRoute)))) {
+            if (p.Loc__no_ !== undefined) locs.add(String(p.Loc__no_));
           }
         }
       });
@@ -289,25 +292,27 @@ export default function MapRoute() {
       
       const tTown = latestAccepted.town || 'Shidler';
       const tRdt = normalizeRdt(latestAccepted.rdtSection);
-      const tRoute = latestAccepted.route ? latestAccepted.route.replace('Route ', '') : '';
-      const tLoc = latestAccepted.location;
+      const tRoute = latestAccepted.route ? String(latestAccepted.route).replace('Route ', '') : '';
+      const tLoc = latestAccepted.location ? String(latestAccepted.location) : '';
       
       // Auto-fill the search form to match the latest
       setSearchTown(tTown);
-      setSearchRdt(tRdt);
+      setSearchRdt(latestAccepted.rdtSection);
       setSearchRoute(tRoute);
-      setSearchLoc(tLoc || '');
+      setSearchLoc(tLoc);
       
       const matchedFeatures = geoData.features.filter(f => {
         const p = f.properties || {};
         if (getTownKey(f) !== tTown) return false;
         
-        const csaPoint = p.Csa ? p.Csa.replace(/^Node\s+/i, '').trim() : '';
-        const csaLine = p.CSA ? p.CSA.replace(/^Node\s+/i, '').trim() : '';
+        const csaPoint = normalizeRdt(p.Csa);
+        const csaLine = normalizeRdt(p.CSA);
+        const pRoutesPoint = p.Rt__no_ ? String(p.Rt__no_).split(/[\/,&]/).map(s => s.trim()) : [];
+        const pRoutesLine = p.Route ? String(p.Route).split(/[\/,&]/).map(s => s.trim()) : [];
 
         if (tRdt && csaPoint !== tRdt && csaLine !== tRdt) return false;
-        if (tRoute && p.Rt__no_ !== tRoute && p.Route !== tRoute) return false;
-        if (tLoc && p.Loc__no_ !== tLoc) return false;
+        if (tRoute && !pRoutesPoint.includes(tRoute) && !pRoutesLine.includes(tRoute)) return false;
+        if (tLoc && String(p.Loc__no_) !== tLoc) return false;
         
         if (!tRdt && !tRoute && !tLoc) return false;
         return true;
@@ -319,6 +324,8 @@ export default function MapRoute() {
         if (bounds.isValid()) {
           map.fitBounds(bounds, { padding: [50, 50], maxZoom: 18, duration: 1.5 });
         }
+      } else {
+        alert('Could not pinpoint the exact location on the map.');
       }
     };
 
@@ -326,19 +333,25 @@ export default function MapRoute() {
       e.preventDefault();
       if (!geoData) return;
 
+      const tRdt = normalizeRdt(searchRdt);
+      const tRoute = searchRoute ? String(searchRoute) : '';
+      const tLoc = searchLoc ? String(searchLoc) : '';
+
       const matchedFeatures = geoData.features.filter(f => {
         const p = f.properties || {};
         if (getTownKey(f) !== searchTown) return false;
         
-        const csaPoint = p.Csa ? p.Csa.replace(/^Node\s+/i, '').trim() : '';
-        const csaLine = p.CSA ? p.CSA.replace(/^Node\s+/i, '').trim() : '';
+        const csaPoint = normalizeRdt(p.Csa);
+        const csaLine = normalizeRdt(p.CSA);
+        const pRoutesPoint = p.Rt__no_ ? String(p.Rt__no_).split(/[\/,&]/).map(s => s.trim()) : [];
+        const pRoutesLine = p.Route ? String(p.Route).split(/[\/,&]/).map(s => s.trim()) : [];
 
-        if (searchRdt && csaPoint !== searchRdt && csaLine !== searchRdt) return false;
-        if (searchRoute && p.Rt__no_ !== searchRoute && p.Route !== searchRoute) return false;
-        if (searchLoc && p.Loc__no_ !== searchLoc) return false;
+        if (tRdt && csaPoint !== tRdt && csaLine !== tRdt) return false;
+        if (tRoute && !pRoutesPoint.includes(tRoute) && !pRoutesLine.includes(tRoute)) return false;
+        if (tLoc && String(p.Loc__no_) !== tLoc) return false;
 
         // If they didn't select anything beyond town, don't just match all
-        if (!searchRdt && !searchRoute && !searchLoc) return false;
+        if (!tRdt && !tRoute && !tLoc) return false;
 
         return true;
       });
@@ -375,13 +388,6 @@ export default function MapRoute() {
           </h4>
           <div className="flex items-center space-x-2">
             <button 
-              onClick={handleJumpToLatest}
-              title="Jump to Latest Log"
-              className="text-xs bg-emerald-100 hover:bg-emerald-200 text-emerald-700 font-bold py-1 px-2 rounded transition-colors flex items-center"
-            >
-              Latest
-            </button>
-            <button 
               onClick={() => setIsMinimized(true)}
               className="text-slate-400 hover:text-slate-600 transition-colors bg-slate-100 hover:bg-slate-200 rounded-full p-1"
               title="Close Panel"
@@ -390,6 +396,15 @@ export default function MapRoute() {
             </button>
           </div>
         </div>
+
+        <button 
+          onClick={handleJumpToLatest}
+          className="w-full mb-3 py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-sm transition-all flex justify-center items-center"
+        >
+          <MapPin className="w-4 h-4 mr-1.5" />
+          Jump to Latest Entry
+        </button>
+
         <form onSubmit={handleSearch} className="space-y-3">
           <div>
             <label className="block text-xs font-semibold text-slate-600 mb-1">Town</label>
