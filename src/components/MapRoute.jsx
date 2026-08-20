@@ -21,7 +21,9 @@ const getTownKey = (feature) => {
 const normalizeRdt = (val) => {
   if (!val) return '';
   return val.replace(/^Node\s+/i, '').trim();
-  const MapSearch = ({ geoData, entries, completedSegments }) => {
+};
+
+const MapSearch = ({ geoData, entries, completedSegments }) => {
     const map = useMap();
     const [isMinimized, setIsMinimized] = useState(false);
     const [searchTown, setSearchTown] = useState('Shidler');
@@ -291,7 +293,6 @@ const normalizeRdt = (val) => {
     }, [data, map]);
     return null;
   };
-};
 
 export default function MapRoute() {
   const { entries } = useAppContext();
