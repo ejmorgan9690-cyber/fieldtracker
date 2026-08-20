@@ -299,7 +299,7 @@ export default function MapRoute() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showLegend, setShowLegend] = useState(true);
-  const [mapMode, setMapMode] = useState('standard'); // 'standard' | 'annotated'
+  const [mapMode, setMapMode] = useState('standard'); // 'standard' | 'redline'
 
   // Pre-calculate indexes and completed segments for fast rendering
   const { completedHandholes, completedSegments } = useMemo(() => {
@@ -420,15 +420,25 @@ export default function MapRoute() {
             try {
               const chunkSegment = turf.lineSliceAlong(fullSegment, startFt, endFt, {units: 'feet'});
               const latLngs = chunkSegment.geometry.coordinates.map(coord => [coord[1], coord[0]]);
-              const midCoord = latLngs[Math.floor(latLngs.length / 2)];
+              let bracketLine = null, bracketStart = null, bracketEnd = null;
+              let midCoord = latLngs[Math.floor(latLngs.length / 2)];
+              
+              try {
+                const offset = turf.lineOffset(chunkSegment, 30, {units: 'feet'});
+                bracketLine = offset.geometry.coordinates.map(coord => [coord[1], coord[0]]);
+                bracketStart = [latLngs[0], bracketLine[0]];
+                bracketEnd = [latLngs[latLngs.length - 1], bracketLine[bracketLine.length - 1]];
+                midCoord = bracketLine[Math.floor(bracketLine.length / 2)];
+              } catch (e) { console.warn("Bracket offset failed", e); }
+
               segments.push({
                 key: `${hhKey}_duct_${entry.id || idx}`,
                 positions: latLngs,
                 standardColor: '#22c55e',
-                inspectorColor: entry.inspectorColor,
                 inspector: entry.inspector,
                 date: entry.date,
                 midCoord: midCoord,
+                bracketLine, bracketStart, bracketEnd,
                 type: 'duct'
               });
             } catch (err) {}
@@ -445,15 +455,25 @@ export default function MapRoute() {
             try {
               const chunkSegment = turf.lineSliceAlong(fullSegment, startFt, endFt, {units: 'feet'});
               const latLngs = chunkSegment.geometry.coordinates.map(coord => [coord[1], coord[0]]);
-              const midCoord = latLngs[Math.floor(latLngs.length / 2)];
+              let bracketLine = null, bracketStart = null, bracketEnd = null;
+              let midCoord = latLngs[Math.floor(latLngs.length / 2)];
+              
+              try {
+                const offset = turf.lineOffset(chunkSegment, 45, {units: 'feet'});
+                bracketLine = offset.geometry.coordinates.map(coord => [coord[1], coord[0]]);
+                bracketStart = [latLngs[0], bracketLine[0]];
+                bracketEnd = [latLngs[latLngs.length - 1], bracketLine[bracketLine.length - 1]];
+                midCoord = bracketLine[Math.floor(bracketLine.length / 2)];
+              } catch (e) { console.warn("Bracket offset failed", e); }
+
               segments.push({
                 key: `${hhKey}_fiber_${entry.id || idx}`,
                 positions: latLngs,
                 standardColor: '#a855f7',
-                inspectorColor: entry.inspectorColor,
                 inspector: entry.inspector,
                 date: entry.date,
                 midCoord: midCoord,
+                bracketLine, bracketStart, bracketEnd,
                 type: 'fiber'
               });
             } catch (err) {}
@@ -607,9 +627,11 @@ export default function MapRoute() {
             Standard View
           </button>
           <button 
-            onClick={() => setMapMode('annotated')} 
-            className={`px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors ${mapMode === 'annotated' ? 'bg-indigo-600 text-white' : 'hover:bg-slate-50 text-slate-600'}`}
-          > Annotated View </button>
+            onClick={() => setMapMode('redline')} 
+            className={`px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors ${mapMode === 'redline' ? 'bg-indigo-600 text-white' : 'hover:bg-slate-50 text-slate-600'}`}
+          >
+            Redline View
+          </button>
         </div>
 
         <MapContainer 
@@ -640,9 +662,9 @@ export default function MapRoute() {
                 );
               })}
 
-              {/* Red Pen Annotations (Annotated View Only) */}
-              {mapMode === 'annotated' && completedSegments.filter(s => s.type === 'duct' || s.type === 'fiber').map(seg => {
-                if (!seg.inspector || !seg.date || !seg.midCoord || !seg.positions || seg.positions.length === 0) return null;
+              {/* Red Pen Annotations (Redline View Only) */}
+              {mapMode === 'redline' && completedSegments.filter(s => s.type === 'duct' || s.type === 'fiber').map(seg => {
+                if (!seg.inspector || !seg.date || !seg.midCoord || !seg.bracketLine) return null;
                 const d = new Date(seg.date);
                 const dateStr = `${d.getMonth()+1}-${d.getDate()}-${String(d.getFullYear()).slice(-2)}`;
                 
@@ -656,18 +678,12 @@ export default function MapRoute() {
                   iconAnchor: [0, 100] // anchors the bottom-left corner of the container to the point
                 });
 
-                const startPos = seg.positions[0];
-                const endPos = seg.positions[seg.positions.length - 1];
-
                 return (
                   <React.Fragment key={`pen-group-${seg.key}`}>
-                    <Marker 
-                      position={seg.midCoord} 
-                      icon={icon} 
-                      zIndexOffset={1000}
-                    />
-                    <CircleMarker center={startPos} radius={3} pathOptions={{ color: '#dc2626', fillColor: '#ef4444', fillOpacity: 1 }} />
-                    <CircleMarker center={endPos} radius={3} pathOptions={{ color: '#dc2626', fillColor: '#ef4444', fillOpacity: 1 }} />
+                    <Marker position={seg.midCoord} icon={icon} zIndexOffset={1000} />
+                    <Polyline positions={seg.bracketLine} pathOptions={{ color: '#dc2626', weight: 2, opacity: 0.8 }} />
+                    <Polyline positions={seg.bracketStart} pathOptions={{ color: '#dc2626', weight: 2, opacity: 0.8 }} />
+                    <Polyline positions={seg.bracketEnd} pathOptions={{ color: '#dc2626', weight: 2, opacity: 0.8 }} />
                   </React.Fragment>
                 );
               })}
