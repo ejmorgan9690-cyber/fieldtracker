@@ -229,8 +229,8 @@ export default function MapRoute() {
     }
   };
 
-  // Component to handle Map Search
-  const MapSearch = ({ geoData }) => {
+  // Component for searching and flying the map to a specific location
+  const MapSearch = ({ geoData, entries }) => {
     const map = useMap();
     const [searchTown, setSearchTown] = useState('Shidler');
     const [searchRdt, setSearchRdt] = useState('');
@@ -242,7 +242,7 @@ export default function MapRoute() {
       const rdts = new Set();
       const routes = new Set();
       const locs = new Set();
-
+      
       geoData.features.forEach(f => {
         const p = f.properties || {};
         if (getTownKey(f) !== searchTown) return;
@@ -268,6 +268,55 @@ export default function MapRoute() {
         locs: Array.from(locs).sort((a, b) => parseInt(a) - parseInt(b)) 
       };
     }, [geoData, searchTown, searchRdt, searchRoute]);
+
+    const handleJumpToLatest = (e) => {
+      e.preventDefault();
+      if (!entries || !geoData) return;
+      
+      // Find the most recently accepted log
+      const latestAccepted = [...entries]
+        .filter(entry => entry.status === 'Accepted')
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
+        
+      if (!latestAccepted) {
+        alert("No accepted logs found yet.");
+        return;
+      }
+      
+      const tTown = latestAccepted.town || 'Shidler';
+      const tRdt = normalizeRdt(latestAccepted.rdtSection);
+      const tRoute = latestAccepted.route ? latestAccepted.route.replace('Route ', '') : '';
+      const tLoc = latestAccepted.location;
+      
+      // Auto-fill the search form to match the latest
+      setSearchTown(tTown);
+      setSearchRdt(tRdt);
+      setSearchRoute(tRoute);
+      setSearchLoc(tLoc || '');
+      
+      const matchedFeatures = geoData.features.filter(f => {
+        const p = f.properties || {};
+        if (getTownKey(f) !== tTown) return false;
+        
+        const csaPoint = p.Csa ? p.Csa.replace(/^Node\s+/i, '').trim() : '';
+        const csaLine = p.CSA ? p.CSA.replace(/^Node\s+/i, '').trim() : '';
+
+        if (tRdt && csaPoint !== tRdt && csaLine !== tRdt) return false;
+        if (tRoute && p.Rt__no_ !== tRoute && p.Route !== tRoute) return false;
+        if (tLoc && p.Loc__no_ !== tLoc) return false;
+        
+        if (!tRdt && !tRoute && !tLoc) return false;
+        return true;
+      });
+
+      if (matchedFeatures.length > 0) {
+        const group = L.geoJSON({ type: 'FeatureCollection', features: matchedFeatures });
+        const bounds = group.getBounds();
+        if (bounds.isValid()) {
+          map.fitBounds(bounds, { padding: [50, 50], maxZoom: 18, duration: 1.5 });
+        }
+      }
+    };
 
     const handleSearch = (e) => {
       e.preventDefault();
@@ -303,7 +352,15 @@ export default function MapRoute() {
 
     return (
       <div className="absolute top-4 right-4 z-[1000] bg-white/95 backdrop-blur-md p-4 rounded-xl shadow-lg border border-slate-200 w-80">
-        <h4 className="text-sm font-bold text-slate-800 mb-3 border-b border-slate-200 pb-2">Location Jump</h4>
+        <div className="flex justify-between items-center border-b border-slate-200 pb-2 mb-3">
+          <h4 className="text-sm font-bold text-slate-800">Location Jump</h4>
+          <button 
+            onClick={handleJumpToLatest}
+            className="text-xs bg-emerald-100 hover:bg-emerald-200 text-emerald-700 font-bold py-1 px-2 rounded transition-colors"
+          >
+            Go to Latest ✔
+          </button>
+        </div>
         <form onSubmit={handleSearch} className="space-y-3">
           <div>
             <label className="block text-xs font-semibold text-slate-600 mb-1">Town</label>
@@ -439,13 +496,13 @@ export default function MapRoute() {
               ))}
 
               <FitBounds data={geoData} />
-              <MapSearch geoData={geoData} />
+              <MapSearch geoData={geoData} entries={entries} />
             </>
           )}
         </MapContainer>
 
         {/* Legend Overlay */}
-        <div className="absolute bottom-6 right-6 z-[1000] bg-white/90 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-slate-200">
+        <div className="absolute bottom-6 left-6 z-[1000] bg-white/90 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-slate-200">
           <h4 className="text-sm font-bold text-slate-800 mb-3 border-b border-slate-200 pb-2">Status Legend</h4>
           <div className="space-y-2">
             <div className="flex items-center">
