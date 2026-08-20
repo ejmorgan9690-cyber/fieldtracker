@@ -48,7 +48,8 @@ export const AppProvider = ({ children }) => {
             status: row.status || 'Pending',
             unitCode: row.unit_code || '',
             hasGroundRod: row.has_ground_rod || false,
-            hasSign: row.has_sign || false
+            hasSign: row.has_sign || false,
+            created_at: row.created_at || null
           }));
           setEntries(mappedEntries);
           localStorage.setItem('fieldTrackerEntries', JSON.stringify(mappedEntries));
