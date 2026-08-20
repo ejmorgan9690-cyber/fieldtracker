@@ -11,6 +11,7 @@ const BORE_NUMBERS = Array.from({ length: 30 }, (_, i) => `${i + 1}`);
 // Custom Combobox to replace buggy native datalists
 const Combobox = ({ id, label, value, onChange, options, placeholder, required }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
   const [search, setSearch] = useState(value);
   const wrapperRef = useRef(null);
 
@@ -22,6 +23,7 @@ const Combobox = ({ id, label, value, onChange, options, placeholder, required }
     function handleClickOutside(event) {
       if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
         setIsOpen(false);
+        setIsTyping(false);
         setSearch(value);
       }
     }
@@ -29,9 +31,9 @@ const Combobox = ({ id, label, value, onChange, options, placeholder, required }
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [wrapperRef, value]);
 
-  const displayOptions = options.filter(opt => 
-    String(opt).toLowerCase().includes(String(search).toLowerCase())
-  );
+  const displayOptions = (isTyping && search)
+    ? options.filter(opt => String(opt).toLowerCase().includes(String(search).toLowerCase()))
+    : options;
 
   return (
     <div className="relative" ref={wrapperRef}>
@@ -42,12 +44,17 @@ const Combobox = ({ id, label, value, onChange, options, placeholder, required }
           type="text"
           value={search}
           onChange={(e) => {
+            setIsTyping(true);
             setSearch(e.target.value);
             setIsOpen(true);
             const exactMatch = options.find(o => String(o).toLowerCase() === e.target.value.toLowerCase());
             if (exactMatch) onChange(exactMatch);
           }}
-          onFocus={() => setIsOpen(true)}
+          onFocus={(e) => {
+            setIsOpen(true);
+            setIsTyping(false);
+            e.target.select();
+          }}
           className="block w-full px-4 py-3 rounded-lg border border-slate-300 bg-white text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 shadow-sm transition-all font-medium"
           placeholder={placeholder || `Select ${label.split(' ')[0]}...`}
           required={required}
