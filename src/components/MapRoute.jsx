@@ -23,7 +23,7 @@ const normalizeRdt = (val) => {
   return val.replace(/^Node\s+/i, '').trim();
 };
 
-const MapSearch = ({ geoData, entries, completedSegments }) => {
+const MapSearch = ({ geoData, entries, completedSegments, setShowLegend }) => {
     const map = useMap();
     const [isMinimized, setIsMinimized] = useState(false);
     const [searchTown, setSearchTown] = useState('Shidler');
@@ -66,6 +66,14 @@ const MapSearch = ({ geoData, entries, completedSegments }) => {
       };
     }, [geoData, searchTown, searchRdt, searchRoute]);
 
+    const zoomToAndClose = (bounds) => {
+      if (bounds.isValid()) {
+        map.fitBounds(bounds, { padding: [50, 50], maxZoom: 18, duration: 1.5 });
+        setIsMinimized(true);
+        if (setShowLegend) setShowLegend(false);
+      }
+    };
+
     const handleJumpToLatest = (e) => {
       e.preventDefault();
       if (!entries || !geoData) return;
@@ -104,11 +112,8 @@ const MapSearch = ({ geoData, entries, completedSegments }) => {
           
           if (allLatLngs.length > 0) {
             const polyline = L.polyline(allLatLngs);
-            const bounds = polyline.getBounds();
-            if (bounds.isValid()) {
-              map.fitBounds(bounds, { padding: [50, 50], maxZoom: 18, duration: 1.5 });
-              return;
-            }
+            zoomToAndClose(polyline.getBounds());
+            return;
           }
         }
       }
@@ -132,10 +137,7 @@ const MapSearch = ({ geoData, entries, completedSegments }) => {
 
       if (matchedFeatures.length > 0) {
         const group = L.geoJSON({ type: 'FeatureCollection', features: matchedFeatures });
-        const bounds = group.getBounds();
-        if (bounds.isValid()) {
-          map.fitBounds(bounds, { padding: [50, 50], maxZoom: 18, duration: 1.5 });
-        }
+        zoomToAndClose(group.getBounds());
       } else {
         alert('Could not pinpoint the exact location on the map.');
       }
@@ -170,10 +172,7 @@ const MapSearch = ({ geoData, entries, completedSegments }) => {
 
       if (matchedFeatures.length > 0) {
         const group = L.geoJSON({ type: 'FeatureCollection', features: matchedFeatures });
-        const bounds = group.getBounds();
-        if (bounds.isValid()) {
-          map.fitBounds(bounds, { padding: [50, 50], maxZoom: 18, duration: 1.5 });
-        }
+        zoomToAndClose(group.getBounds());
       } else {
         alert('No exact location match found on map.');
       }
@@ -579,7 +578,7 @@ export default function MapRoute() {
               ))}
 
               <FitBounds data={geoData} />
-              <MapSearch geoData={geoData} entries={entries} completedSegments={completedSegments} />
+              <MapSearch geoData={geoData} entries={entries} completedSegments={completedSegments} setShowLegend={setShowLegend} />
             </>
           )}
         </MapContainer>
