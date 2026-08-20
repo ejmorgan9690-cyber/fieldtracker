@@ -18,29 +18,29 @@ body {
 }
 .red-pen-container {
   position: relative;
-  width: 150px;
-  height: 100px;
+  width: 120px;
+  height: 80px;
   pointer-events: none;
 }
 .red-pen-line {
   position: absolute;
   bottom: 0;
   left: 0;
-  width: 70px;
+  width: 45px;
   height: 1px;
   background-color: #dc2626;
-  transform: rotate(-35deg);
+  transform: rotate(-30deg);
   transform-origin: bottom left;
 }
 .red-pen-text {
   position: absolute;
-  bottom: 30px; 
-  left: 45px;
+  bottom: 20px; 
+  left: 35px;
   font-family: 'Caveat', cursive;
   color: #dc2626;
-  font-size: 1.15rem;
-  line-height: 1.1;
-  transform: rotate(-15deg);
+  font-size: 0.85rem;
+  line-height: 1.0;
+  transform: rotate(-10deg);
   white-space: nowrap;
   text-shadow: 1px 1px 0px rgba(255,255,255,1), 
                -1px -1px 0px rgba(255,255,255,1),

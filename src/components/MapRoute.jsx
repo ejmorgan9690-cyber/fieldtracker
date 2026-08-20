@@ -438,6 +438,8 @@ export default function MapRoute() {
                 standardColor: '#22c55e',
                 inspector: entry.inspector,
                 date: entry.date,
+                unitCode: entry.unitCode,
+                ft: entry.ft,
                 midCoord: midCoord,
                 bracketLine, bracketStart, bracketEnd,
                 type: 'duct'
@@ -474,6 +476,8 @@ export default function MapRoute() {
                 standardColor: '#a855f7',
                 inspector: entry.inspector,
                 date: entry.date,
+                unitCode: entry.unitCode,
+                ft: entry.ft,
                 midCoord: midCoord,
                 bracketLine, bracketStart, bracketEnd,
                 type: 'fiber'
@@ -670,14 +674,22 @@ export default function MapRoute() {
                 const d = new Date(seg.date);
                 const dateStr = `${d.getMonth()+1}-${d.getDate()}-${String(d.getFullYear()).slice(-2)}`;
                 
+                const unitStr = seg.unitCode ? `<br/>${seg.unitCode}` : '';
+                const ftStr = seg.ft ? `<br/>${seg.ft}'` : '';
+                
                 const icon = L.divIcon({
                   className: 'red-pen-label',
                   html: `<div class="red-pen-container">
                            <div class="red-pen-line"></div>
-                           <div class="red-pen-text">${seg.inspector}<br/>${dateStr}</div>
+                           <div class="red-pen-text">
+                             ${seg.inspector}<br/>
+                             ${dateStr}
+                             ${unitStr}
+                             ${ftStr}
+                           </div>
                          </div>`,
-                  iconSize: [150, 100],
-                  iconAnchor: [0, 100] // anchors the bottom-left corner of the container to the point
+                  iconSize: [120, 80],
+                  iconAnchor: [0, 80] // anchors the bottom-left corner of the container to the point
                 });
 
                 return (
