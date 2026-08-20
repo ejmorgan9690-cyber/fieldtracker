@@ -120,10 +120,10 @@ export default function MasterUnitSheet() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right font-bold text-slate-900 text-lg">
                       {row.taskType === 'Hand Hole' || row.taskType === 'Accessory' || row.unitCode.includes('LOOP') 
-                        ? `${row.taskType === 'Hand Hole' || row.taskType === 'Accessory' ? row.totalQty : row.totalFootage} ` 
+                        ? `${row.totalQty} ` 
                         : `${row.totalFootage.toLocaleString()} `}
                       <span className="text-sm font-medium text-slate-500">
-                        {row.taskType === 'Hand Hole' || row.taskType === 'Accessory' ? 'each' : 'ft'}
+                        {row.taskType === 'Hand Hole' || row.taskType === 'Accessory' || row.unitCode.includes('LOOP') ? 'each' : 'ft'}
                       </span>
                     </td>
                   </tr>
