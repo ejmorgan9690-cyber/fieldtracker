@@ -3,7 +3,7 @@ import { useAppContext } from '../context/AppContext';
 import { Save, CheckCircle, FileSignature, Calendar, User, Upload, Image as ImageIcon, X } from 'lucide-react';
 
 const RDT_SECTIONS = [...Array.from({ length: 10 }, (_, i) => `RDT${i + 1}`), 'Toll N', 'Toll S'];
-const ROUTES = Array.from({ length: 20 }, (_, i) => `Route ${i + 1}`);
+const ROUTES = Array.from({ length: 50 }, (_, i) => String(i + 1));
 const TASK_TYPES = ['Bore', 'Plow Duct', 'Fiber', 'Hand Hole', 'Drop'];
 const FIBER_COUNTS = ['4 count', '12 count', '24 count', '48 count', '96 count', '144 count', '288 count'];
 const BORE_NUMBERS = Array.from({ length: 30 }, (_, i) => `${i + 1}`);
@@ -109,7 +109,7 @@ export default function LoggingForm() {
   const [town, setTown] = useState(() => localStorage.getItem('fieldTrackerTown') || 'Shidler');
   
   const [rdtSection, setRdtSection] = useState('RDT1');
-  const [route, setRoute] = useState('Route 1');
+  const [route, setRoute] = useState('1');
   const [location, setLocation] = useState('1');
   const [footage, setFootage] = useState('');
   
