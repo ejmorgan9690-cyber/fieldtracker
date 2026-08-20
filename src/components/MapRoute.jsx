@@ -428,7 +428,8 @@ export default function MapRoute() {
                 bracketLine = offset.geometry.coordinates.map(coord => [coord[1], coord[0]]);
                 bracketStart = [latLngs[0], bracketLine[0]];
                 bracketEnd = [latLngs[latLngs.length - 1], bracketLine[bracketLine.length - 1]];
-                midCoord = bracketLine[Math.floor(bracketLine.length / 2)];
+                const midPt = turf.along(offset, turf.length(offset, {units: 'feet'}) / 2, {units: 'feet'});
+                midCoord = [midPt.geometry.coordinates[1], midPt.geometry.coordinates[0]];
               } catch (e) { console.warn("Bracket offset failed", e); }
 
               segments.push({
@@ -463,7 +464,8 @@ export default function MapRoute() {
                 bracketLine = offset.geometry.coordinates.map(coord => [coord[1], coord[0]]);
                 bracketStart = [latLngs[0], bracketLine[0]];
                 bracketEnd = [latLngs[latLngs.length - 1], bracketLine[bracketLine.length - 1]];
-                midCoord = bracketLine[Math.floor(bracketLine.length / 2)];
+                const midPt = turf.along(offset, turf.length(offset, {units: 'feet'}) / 2, {units: 'feet'});
+                midCoord = [midPt.geometry.coordinates[1], midPt.geometry.coordinates[0]];
               } catch (e) { console.warn("Bracket offset failed", e); }
 
               segments.push({
