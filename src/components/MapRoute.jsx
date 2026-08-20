@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { MapContainer, TileLayer, GeoJSON, Polyline, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, GeoJSON, Polyline, Marker, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Layers, CheckCircle, Search, X, Info, MapPin } from 'lucide-react';
 import L from 'leaflet';
@@ -293,18 +293,23 @@ const MapSearch = ({ geoData, entries, completedSegments, setShowLegend }) => {
     return null;
   };
 
+const INSPECTOR_COLORS = [
+  '#ef4444', '#3b82f6', '#f59e0b', '#10b981', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316'
+];
+
 export default function MapRoute() {
   const { entries } = useAppContext();
   const [geoData, setGeoData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showLegend, setShowLegend] = useState(true);
+  const [mapMode, setMapMode] = useState('standard'); // 'standard' | 'inspector'
 
   // Pre-calculate indexes and completed segments for fast rendering
-  const { completedHandholes, completedSegments } = useMemo(() => {
+  const { completedHandholes, completedSegments, inspectorColors } = useMemo(() => {
     const completedHH = new Set();
     const segments = [];
-    if (!entries || !geoData) return { completedHandholes: completedHH, completedSegments: segments };
+    if (!entries || !geoData) return { completedHandholes: completedHH, completedSegments: segments, inspectorColors: new Map() };
 
     // 1. Build indexes of the GeoJSON data for quick lookup
     const pointsMap = new Map(); // key: "Town_Csa_Route_Loc"
@@ -327,7 +332,9 @@ export default function MapRoute() {
     });
 
     // 2. Process Accepted entries
-    const segmentFootages = new Map(); // key: hhKey, value: { duct: 0, fiber: 0 }
+    const segmentFootages = new Map(); // key: hhKey, value: { duct: 0, fiber: 0, inspectors: {}, lastDate: null }
+    const iColors = new Map();
+    let colorIdx = 0;
 
     entries.forEach(entry => {
       if (entry.status === 'Accepted' && entry.taskType !== 'Drop') {
@@ -336,16 +343,20 @@ export default function MapRoute() {
         const route = entry.route ? String(entry.route).replace('Route ', '') : '';
         const loc = entry.location;
         const hhKey = `${town}_${rdt}_${route}_${loc}`;
+        const inspector = entry.inspector || 'Unknown';
+        
+        if (!iColors.has(inspector)) {
+          iColors.set(inspector, INSPECTOR_COLORS[colorIdx % INSPECTOR_COLORS.length]);
+          colorIdx++;
+        }
         
         if (entry.taskType === 'Hand Hole') {
-          // ONLY highlight the handhole icon if they specifically logged a Hand Hole
           completedHH.add(hhKey);
         } else {
-          // For routes (Bore, Plow, Fiber), calculate cumulative footage
           const ft = parseFloat(entry.footage) || 0;
           if (ft > 0) {
             if (!segmentFootages.has(hhKey)) {
-              segmentFootages.set(hhKey, { duct: 0, fiber: 0 });
+              segmentFootages.set(hhKey, { duct: 0, fiber: 0, inspectors: {}, lastDate: null });
             }
             const currentFt = segmentFootages.get(hhKey);
             if (entry.taskType === 'Fiber') {
@@ -353,9 +364,30 @@ export default function MapRoute() {
             } else {
               currentFt.duct += ft;
             }
+            
+            // Track inspector dominance
+            currentFt.inspectors[inspector] = (currentFt.inspectors[inspector] || 0) + ft;
+            
+            // Track most recent date
+            if (!currentFt.lastDate || new Date(entry.date) > new Date(currentFt.lastDate)) {
+              currentFt.lastDate = entry.date;
+            }
           }
         }
       }
+    });
+
+    // Determine primary inspector for each segment
+    segmentFootages.forEach(data => {
+      let maxFt = 0;
+      let primary = null;
+      for (const [insp, ft] of Object.entries(data.inspectors)) {
+        if (ft > maxFt) {
+          maxFt = ft;
+          primary = insp;
+        }
+      }
+      data.primaryInspector = primary;
     });
     
     // 3. Render Route Lines dynamically based on cumulative footage
@@ -398,7 +430,15 @@ export default function MapRoute() {
               ductSegment = turf.lineSliceAlong(fullSegment, 0, totalFt.duct, {units: 'feet'});
             }
             const ductLatLngs = ductSegment.geometry.coordinates.map(coord => [coord[1], coord[0]]);
-            segments.push({ key: hhKey + '_duct', positions: ductLatLngs, color: '#22c55e' }); // Green
+            segments.push({ 
+              key: hhKey + '_duct', 
+              positions: ductLatLngs, 
+              color: '#22c55e', 
+              primaryInspector: totalFt.primaryInspector, 
+              lastDate: totalFt.lastDate,
+              endCoord: [endPoint.geometry.coordinates[1], endPoint.geometry.coordinates[0]],
+              type: 'duct'
+            }); // Green
           }
           
           if (totalFt.fiber > 0) {
@@ -407,7 +447,15 @@ export default function MapRoute() {
               fiberSegment = turf.lineSliceAlong(fullSegment, 0, totalFt.fiber, {units: 'feet'});
             }
             const fiberLatLngs = fiberSegment.geometry.coordinates.map(coord => [coord[1], coord[0]]);
-            segments.push({ key: hhKey + '_fiber', positions: fiberLatLngs, color: '#a855f7' }); // Purple
+            segments.push({ 
+              key: hhKey + '_fiber', 
+              positions: fiberLatLngs, 
+              color: '#a855f7',
+              primaryInspector: totalFt.primaryInspector,
+              lastDate: totalFt.lastDate,
+              endCoord: [endPoint.geometry.coordinates[1], endPoint.geometry.coordinates[0]],
+              type: 'fiber'
+            }); // Purple
           }
         } catch (err) {
           console.warn("Could not slice line segment for", hhKey, err);
@@ -415,13 +463,29 @@ export default function MapRoute() {
           const endCoords = endPoint.geometry.coordinates;
           const fallbackPositions = [[startCoords[1], startCoords[0]], [endCoords[1], endCoords[0]]];
           
-          if (totalFt.duct > 0) segments.push({ key: hhKey + '_duct', positions: fallbackPositions, color: '#22c55e' });
-          if (totalFt.fiber > 0) segments.push({ key: hhKey + '_fiber', positions: fallbackPositions, color: '#a855f7' });
+          if (totalFt.duct > 0) segments.push({ 
+            key: hhKey + '_duct', 
+            positions: fallbackPositions, 
+            color: '#22c55e',
+            primaryInspector: totalFt.primaryInspector,
+            lastDate: totalFt.lastDate,
+            endCoord: [endCoords[1], endCoords[0]],
+            type: 'duct'
+          });
+          if (totalFt.fiber > 0) segments.push({ 
+            key: hhKey + '_fiber', 
+            positions: fallbackPositions, 
+            color: '#a855f7',
+            primaryInspector: totalFt.primaryInspector,
+            lastDate: totalFt.lastDate,
+            endCoord: [endCoords[1], endCoords[0]],
+            type: 'fiber'
+          });
         }
       }
     }
     
-    return { completedHandholes: completedHH, completedSegments: segments };
+    return { completedHandholes: completedHH, completedSegments: segments, inspectorColors: iColors };
   }, [entries, geoData]);
 
   useEffect(() => {
@@ -553,6 +617,22 @@ export default function MapRoute() {
           </div>
         )}
 
+        {/* Map Mode Toggle */}
+        <div className="absolute top-4 right-4 z-[400] bg-white rounded-lg shadow-md flex overflow-hidden border border-slate-200">
+          <button 
+            onClick={() => setMapMode('standard')} 
+            className={`px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors ${mapMode === 'standard' ? 'bg-indigo-600 text-white' : 'hover:bg-slate-50 text-slate-600'}`}
+          >
+            Standard View
+          </button>
+          <button 
+            onClick={() => setMapMode('inspector')} 
+            className={`px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors ${mapMode === 'inspector' ? 'bg-indigo-600 text-white' : 'hover:bg-slate-50 text-slate-600'}`}
+          >
+            Inspector View
+          </button>
+        </div>
+
         <MapContainer 
           center={[36.737, -96.499]} // Fallback center
           zoom={12} 
@@ -569,13 +649,47 @@ export default function MapRoute() {
               <GeoJSON data={geoData} style={getStyle} onEachFeature={onEachFeature} pointToLayer={pointToLayer} />
               
               {/* Highlighted Completed Route Segments */}
-              {completedSegments.map(seg => (
-                <Polyline 
-                  key={`highlight-${seg.key}`}
-                  positions={seg.positions} 
-                  pathOptions={{ color: seg.color, weight: 8, opacity: 0.8, lineCap: 'round', lineJoin: 'round' }} 
-                />
-              ))}
+              {completedSegments.map(seg => {
+                let strokeColor = seg.color;
+                if (mapMode === 'inspector' && seg.primaryInspector) {
+                  strokeColor = inspectorColors.get(seg.primaryInspector) || '#333333';
+                }
+                
+                // If in inspector mode, we might want to offset or change styles, but color is the main thing
+                return (
+                  <Polyline 
+                    key={`highlight-${seg.key}`}
+                    positions={seg.positions} 
+                    pathOptions={{ color: strokeColor, weight: 8, opacity: 0.8, lineCap: 'round', lineJoin: 'round' }} 
+                  />
+                );
+              })}
+
+              {/* Red Pen Annotations (Inspector View Only) */}
+              {mapMode === 'inspector' && completedSegments.filter(s => s.type === 'duct' || s.type === 'fiber').map(seg => {
+                if (!seg.primaryInspector || !seg.lastDate || !seg.endCoord) return null;
+                const d = new Date(seg.lastDate);
+                const dateStr = `${d.getMonth()+1}-${d.getDate()}-${String(d.getFullYear()).slice(-2)}`;
+                
+                const icon = L.divIcon({
+                  className: 'red-pen-label',
+                  html: `<div class="red-pen-container">
+                           <div class="red-pen-line"></div>
+                           <div class="red-pen-text">${seg.primaryInspector}<br/>${dateStr}</div>
+                         </div>`,
+                  iconSize: [150, 100],
+                  iconAnchor: [0, 100] // anchors the bottom-left corner of the container to the point
+                });
+
+                return (
+                  <Marker 
+                    key={`pen-${seg.key}`} 
+                    position={seg.endCoord} 
+                    icon={icon} 
+                    zIndexOffset={1000}
+                  />
+                );
+              })}
 
               <FitBounds data={geoData} />
               <MapSearch geoData={geoData} entries={entries} completedSegments={completedSegments} setShowLegend={setShowLegend} />
