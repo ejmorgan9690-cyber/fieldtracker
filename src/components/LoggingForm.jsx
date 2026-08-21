@@ -366,8 +366,23 @@ export default function LoggingForm() {
       }
     }
 
-    if (lower.includes('dirt')) parsed.unitCode = 'BM61D';
-    if (lower.includes('rock')) parsed.unitCode = 'BM61R';
+    // Unit Code Parsing
+    if (parsed.taskType === 'Bore') {
+      if (lower.includes('dirt')) parsed.unitCode = 'BM61D';
+      if (lower.includes('rock')) parsed.unitCode = 'BM61R';
+    } else if (parsed.taskType === 'Plow Duct') {
+      const plowMatch = lower.match(/(?:one|two|three|four|\d)\s*(?:duct|pipe|conduit)/) || lower.match(/(?:duct|pipe|conduit)\s*(one|two|three|four|\d)/);
+      if (plowMatch) {
+         const num = plowMatch[1].replace('one','1').replace('two','2').replace('three','3').replace('four','4');
+         if (['1','2','3','4'].includes(num)) parsed.unitCode = `BFOV (1.25)(${num})`;
+      }
+    } else if (parsed.taskType === 'Fiber') {
+      const bfoMatch = lower.match(/(?:bfo|unit)\s*(24|48|72|96)/);
+      if (bfoMatch) parsed.unitCode = `BFO ${bfoMatch[1]}I`;
+    } else if (parsed.taskType === 'Hand Hole') {
+      if (lower.includes('small') || lower.includes('30') || lower.includes('24x36')) parsed.unitCode = 'BHF (24x36x30)';
+      if (lower.includes('large') || lower.includes('48') || lower.includes('30x48')) parsed.unitCode = 'BHF (30x48x36)';
+    }
 
     // Extract valid fiber counts anywhere in the sentence (e.g. "48 fiber", "fiber 48")
     const allNumsForFiber = lower.match(/\b\d+\b/g) || [];
@@ -573,29 +588,43 @@ export default function LoggingForm() {
                 </div>
               </div>
 
-              {voiceData.taskType === 'Bore' && (
-                <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4 mt-4">
+                {voiceData.taskType !== 'Drop' && (
                   <div>
                     <label className="block text-xs font-bold text-slate-600 uppercase">Unit Code</label>
                     <select value={voiceData.unitCode} onChange={e => setVoiceData({...voiceData, unitCode: e.target.value})} className="w-full mt-1 p-2 border border-slate-300 rounded-lg font-semibold text-slate-800 bg-white focus:ring-2 focus:ring-indigo-500">
-                      <option value="">Select Dirt/Rock</option>
-                      <option value="BM61D">BM61D (Dirt)</option>
-                      <option value="BM61R">BM61R (Rock)</option>
+                      <option value="">Select Unit</option>
+                      {voiceData.taskType === 'Bore' && (
+                        <>
+                          <option value="BM61D">BM61D (Dirt)</option>
+                          <option value="BM61R">BM61R (Rock)</option>
+                        </>
+                      )}
+                      {voiceData.taskType === 'Fiber' && ['BFO 24I', 'BFO 48I', 'BFO 72I', 'BFO 96I'].map(opt => (
+                        <option key={opt} value={opt}>{opt}</option>
+                      ))}
+                      {voiceData.taskType === 'Plow Duct' && ['BFOV (1.25)(1)', 'BFOV (1.25)(2)', 'BFOV (1.25)(3)', 'BFOV (1.25)(4)'].map(opt => (
+                        <option key={opt} value={opt}>{opt}</option>
+                      ))}
+                      {voiceData.taskType === 'Hand Hole' && ['BHF (24x36x30)', 'BHF (30x48x36)'].map(opt => (
+                        <option key={opt} value={opt}>{opt}</option>
+                      ))}
+                      {voiceData.taskType === 'Trench' && (
+                        <option value="BM60">BM60</option> 
+                      )}
                     </select>
                   </div>
-                </div>
-              )}
+                )}
 
-              {voiceData.taskType === 'Fiber' && (
-                <div className="grid grid-cols-2 gap-4">
+                {voiceData.taskType === 'Fiber' && (
                   <div>
                     <label className="block text-xs font-bold text-slate-600 uppercase">Fiber Size</label>
                     <select value={voiceData.fiberCount} onChange={e => setVoiceData({...voiceData, fiberCount: e.target.value})} className="w-full mt-1 p-2 border border-slate-300 rounded-lg font-semibold text-slate-800 bg-white focus:ring-2 focus:ring-indigo-500">
                       {FIBER_COUNTS.map(count => <option key={count} value={count}>{count}</option>)}
                     </select>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
 
               <div>
                 <label className="block text-xs font-bold text-slate-600 uppercase mb-1 flex items-center justify-between">
