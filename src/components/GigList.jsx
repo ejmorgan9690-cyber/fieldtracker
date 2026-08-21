@@ -1,9 +1,9 @@
 import React, { useMemo, useState, useRef } from 'react';
 import { useAppContext, formatDate } from '../context/AppContext';
-import { ClipboardList, Plus, X, Trash2, AlertCircle, Mic, Square } from 'lucide-react';
+import { ClipboardList, Plus, X, Trash2, AlertCircle, Mic, Square, Send, CheckCircle2 } from 'lucide-react';
 
 export default function GigList() {
-  const { entries, gigs, authUser, addGig, deleteGig } = useAppContext();
+  const { entries, gigs, authUser, addGig, deleteGig, shareGig } = useAppContext();
   const [showForm, setShowForm] = useState(false);
 
   // Form State
@@ -310,17 +310,36 @@ export default function GigList() {
                     </td>
                     <td className="px-8 py-4 whitespace-nowrap text-center">
                       {!row.isLegacy && (
-                        <button
-                          onClick={() => {
-                            if (window.confirm('Are you sure you want to delete this gig?')) {
-                              deleteGig(row.id);
-                            }
-                          }}
-                          className="text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded-lg transition-colors"
-                          title="Delete gig"
-                        >
-                          <Trash2 className="h-5 w-5 mx-auto" />
-                        </button>
+                        <div className="flex items-center justify-center space-x-2">
+                          {!row.sharedWithResident ? (
+                            <button
+                              onClick={() => {
+                                if (window.confirm('Send this gig to the resident? They will be able to see it.')) {
+                                  shareGig(row.id);
+                                }
+                              }}
+                              className="text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 p-2 rounded-lg transition-colors"
+                              title="Send to Resident"
+                            >
+                              <Send className="h-5 w-5 mx-auto" />
+                            </button>
+                          ) : (
+                            <div className="text-emerald-600 p-2" title="Sent to Resident">
+                              <CheckCircle2 className="h-5 w-5 mx-auto" />
+                            </div>
+                          )}
+                          <button
+                            onClick={() => {
+                              if (window.confirm('Are you sure you want to delete this gig?')) {
+                                deleteGig(row.id);
+                              }
+                            }}
+                            className="text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded-lg transition-colors"
+                            title="Delete gig"
+                          >
+                            <Trash2 className="h-5 w-5 mx-auto" />
+                          </button>
+                        </div>
                       )}
                       {row.isLegacy && <span className="text-xs text-slate-400 italic">Legacy Log</span>}
                     </td>

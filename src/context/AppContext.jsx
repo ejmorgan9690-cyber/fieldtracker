@@ -66,10 +66,11 @@ export const AppProvider = ({ children }) => {
             date: row.service_date,
             rdtSection: row.section,
             route: row.route,
-            location: row.location,
+            location: row.location || '',
             psNumber: row.ps_number || '',
             imageData: row.image_data,
             notes: row.notes || '',
+            sharedWithResident: row.shared_with_resident || false,
             swap_start_lat: row.swap_start_lat || null,
             swap_start_lng: row.swap_start_lng || null,
             swap_end_lat: row.swap_end_lat || null,
@@ -361,16 +362,17 @@ export const AppProvider = ({ children }) => {
         const supabasePayload = {
           inspector_name: redline.inspector,
           service_date: redline.date,
-          section: redline.rdtSection,
-          route: redline.route,
-          location: redline.location,
-          ps_number: redline.psNumber,
+          section: redline.rdtSection || 'N/A',
+          route: redline.route || 'N/A',
+          location: redline.location || 'N/A',
+          ps_number: redline.psNumber || '',
           image_data: redline.imageData,
-          notes: redline.notes,
-          swap_start_lat: redline.swap_start_lat,
-          swap_start_lng: redline.swap_start_lng,
-          swap_end_lat: redline.swap_end_lat,
-          swap_end_lng: redline.swap_end_lng
+          notes: redline.notes || '',
+          shared_with_resident: redline.sharedWithResident || false,
+          swap_start_lat: redline.swap_start_lat || null,
+          swap_start_lng: redline.swap_start_lng || null,
+          swap_end_lat: redline.swap_end_lat || null,
+          swap_end_lng: redline.swap_end_lng || null
         };
 
       const { data, error } = await supabase.from('redlines').insert([supabasePayload]).select();
@@ -385,6 +387,23 @@ export const AppProvider = ({ children }) => {
       setRedlines(newRedlines);
       localStorage.setItem('fieldTrackerRedlines', JSON.stringify(newRedlines));
     }
+  };
+
+  const shareRedline = async (id) => {
+    try {
+      await supabase.from('redlines').update({ shared_with_resident: true }).eq('id', id);
+    } catch (e) {
+      console.error("Error sharing redline:", e);
+    }
+    const newRedlines = redlines.map(r => r.id === id ? { ...r, sharedWithResident: true } : r);
+    setRedlines(newRedlines);
+    localStorage.setItem('fieldTrackerRedlines', JSON.stringify(newRedlines));
+  };
+
+  const shareGig = (id) => {
+    const newGigs = gigs.map(g => g.id === id ? { ...g, sharedWithResident: true } : g);
+    setGigs(newGigs);
+    localStorage.setItem('fieldTrackerGigs', JSON.stringify(newGigs));
   };
 
   const deleteRedline = (id) => {
@@ -449,8 +468,8 @@ export const AppProvider = ({ children }) => {
       authUser, login, logout, register,
       entries, addEntry, deleteEntry, verifyEntry, rejectEntry,
       dailies, addDaily, deleteDaily,
-      gigs, addGig, deleteGig,
-      redlines, addRedline, deleteRedline,
+      gigs, addGig, deleteGig, shareGig,
+      redlines, addRedline, deleteRedline, shareRedline,
       notes, addNote, deleteNote,
       activeTab, setActiveTab, clearData 
     }}>

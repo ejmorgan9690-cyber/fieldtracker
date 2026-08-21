@@ -109,6 +109,11 @@ export default function LoggingForm() {
   const [lastLocation, setLastLocation] = useState(localStorage.getItem('fieldTrackerLastLocation') || '');
   const [taskType, setTaskType] = useState('Bore');
   const [psNumber, setPsNumber] = useState('');
+
+  // Optional redline upload in log
+  const [redlineImagePreview, setRedlineImagePreview] = useState(null);
+  const [redlineImageData, setRedlineImageData] = useState(null);
+  const redlineFileInputRef = useRef(null);
   const [boreNumber, setBoreNumber] = useState('1');
   const [isAddedBore, setIsAddedBore] = useState(false);
   const [gpsCoordinates, setGpsCoordinates] = useState('');
@@ -613,6 +618,7 @@ export default function LoggingForm() {
         route: taskType === 'Drop' || rdtSection === 'Toll N' || rdtSection === 'Toll S' ? '-' : route,
         location: taskType === 'Drop' ? '-' : location,
         imageData,
+        sharedWithResident: true,
         notes: `${unitCode ? `UNIT: ${unitCode}` : ''} ${isPlowRock ? '+ BM71' : ''} ${isFiberLoop ? `+ LOOP (${loopQuantity})` : ''}`.trim()
       });
     }

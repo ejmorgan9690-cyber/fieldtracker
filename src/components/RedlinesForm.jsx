@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useAppContext } from '../context/AppContext';
-import { Map, Upload, Image as ImageIcon, X, MapPin } from 'lucide-react';
+import { Map, Upload, Image as ImageIcon, X } from 'lucide-react';
 
 export default function RedlinesForm() {
   const { authUser, addRedline } = useAppContext();
@@ -10,44 +10,10 @@ export default function RedlinesForm() {
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    return `--`;
   };
 
   const [date, setDate] = useState(getLocalDateString());
-  const [rdtSection, setRdtSection] = useState('RDT1');
-  const [route, setRoute] = useState('Route 1');
-  const [location, setLocation] = useState('1');
-  const [psNumber, setPsNumber] = useState('');
-  
-  // Route Change / Side Swap State
-  const [notes, setNotes] = useState('');
-  const [hasSideSwap, setHasSideSwap] = useState(false);
-  const [swapStartLat, setSwapStartLat] = useState('');
-  const [swapStartLng, setSwapStartLng] = useState('');
-  const [swapEndLat, setSwapEndLat] = useState('');
-  const [swapEndLng, setSwapEndLng] = useState('');
-
-  const handleGetLocation = (type) => {
-    if (!navigator.geolocation) {
-      alert('Geolocation is not supported by your browser');
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        if (type === 'start') {
-          setSwapStartLat(position.coords.latitude.toFixed(6));
-          setSwapStartLng(position.coords.longitude.toFixed(6));
-        } else {
-          setSwapEndLat(position.coords.latitude.toFixed(6));
-          setSwapEndLng(position.coords.longitude.toFixed(6));
-        }
-      },
-      () => {
-        alert('Unable to retrieve your location');
-      }
-    );
-  };
-
   const [imagePreview, setImagePreview] = useState(null);
   const [imageData, setImageData] = useState(null);
   const fileInputRef = useRef(null);
@@ -73,31 +39,28 @@ export default function RedlinesForm() {
       return;
     }
     
+    // Pass default "N/A" values for stripped fields so we don't break Supabase constraints,
+    // and default to NOT shared with resident
     addRedline({
       inspector: authUser.name,
       date,
-      rdtSection,
-      route: rdtSection === 'Toll N' || rdtSection === 'Toll S' ? '-' : route,
-      location,
-      psNumber,
+      rdtSection: 'N/A',
+      route: 'N/A',
+      location: 'N/A',
+      psNumber: 'N/A',
       imageData,
-      notes,
-      swap_start_lat: hasSideSwap && swapStartLat ? parseFloat(swapStartLat) : null,
-      swap_start_lng: hasSideSwap && swapStartLng ? parseFloat(swapStartLng) : null,
-      swap_end_lat: hasSideSwap && swapEndLat ? parseFloat(swapEndLat) : null,
-      swap_end_lng: hasSideSwap && swapEndLng ? parseFloat(swapEndLng) : null
+      notes: '',
+      sharedWithResident: false,
+      swap_start_lat: null,
+      swap_start_lng: null,
+      swap_end_lat: null,
+      swap_end_lng: null
     });
     
     // Reset form
     setImageData(null);
     setImagePreview(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
-    setNotes('');
-    setHasSideSwap(false);
-    setSwapStartLat('');
-    setSwapStartLng('');
-    setSwapEndLat('');
-    setSwapEndLng('');
     
     setSuccessMsg(true);
     setTimeout(() => setSuccessMsg(false), 3000);
@@ -111,205 +74,77 @@ export default function RedlinesForm() {
         </div>
         <div>
           <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Upload Redlines</h2>
-          <p className="mt-1 text-sm text-slate-500 font-medium">Submit a hard-copy redline print for <span className="font-bold text-purple-600">{authUser?.name}</span>.</p>
+          <p className="mt-1 text-sm text-slate-500 font-medium">Submit a hard-copy redline print for <span className="font-bold text-purple-600">{authUser?.name}</span>. Redlines will remain private to you unless explicitly sent to the resident.</p>
         </div>
       </div>
       
       <form onSubmit={handleSubmit} className="space-y-6">
         
-        {/* Hierarchy Selection */}
+        {/* Date */}
         <div className="bg-slate-50 p-6 rounded-xl border border-slate-100">
-          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 border-b border-slate-200 pb-3">Location Details</h3>
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">Date</label>
-              <input type="date" value={date} onChange={(e) => setDate(e.target.value)} required className="block w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-purple-500 focus:border-purple-500" />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">Node</label>
-              <input
-                type="text"
-                list="redline-rdt-options"
-                value={rdtSection}
-                onChange={(e) => setRdtSection(e.target.value)}
-                onClick={(e) => e.target.select()}
-                required
-                className="block w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-              />
-              <datalist id="redline-rdt-options">
-                {[...Array.from({ length: 10 }, (_, i) => `RDT${i + 1}`), 'Toll N', 'Toll S'].map(r => <option key={r} value={r} />)}
-              </datalist>
-            </div>
-            {rdtSection !== 'Toll N' && rdtSection !== 'Toll S' && (
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Route</label>
-                <input
-                  type="text"
-                  list="redline-route-options"
-                  value={route}
-                  onChange={(e) => setRoute(e.target.value)}
-                  onClick={(e) => e.target.select()}
-                  required
-                  className="block w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                />
-                <datalist id="redline-route-options">
-                  {Array.from({ length: 20 }, (_, i) => `Route ${i + 1}`).map(r => <option key={r} value={r} />)}
-                </datalist>
-              </div>
-            )}
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">Location</label>
-              <input
-                type="text"
-                list="redline-location-options"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                onClick={(e) => e.target.select()}
-                required
-                className="block w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                placeholder="e.g. 1"
-              />
-              <datalist id="redline-location-options">
-                {(rdtSection === 'Toll N' || rdtSection === 'Toll S' 
-                  ? Array.from({ length: 301 }, (_, i) => `${i}`)
-                  : Array.from({ length: 20 }, (_, i) => `${i + 1}`)
-                ).map(l => <option key={l} value={l} />)}
-              </datalist>
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">PS Number</label>
-              <input
-                type="text"
-                value={psNumber}
-                onChange={(e) => setPsNumber(e.target.value)}
-                required
-                className="block w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                placeholder="e.g. PS-101"
-              />
-            </div>
+          <div className="w-full sm:max-w-xs">
+            <label className="block text-sm font-semibold text-slate-700 mb-2">Service Date</label>
+            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} required className="block w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-purple-500 focus:border-purple-500" />
           </div>
         </div>
 
-        {/* Route Change / Side Swap Details */}
-        <div className="bg-slate-50 p-6 rounded-xl border border-slate-100">
-          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 border-b border-slate-200 pb-3">Route Change & Side Swaps</h3>
-          
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">Change Notes / Description</label>
-              <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="e.g. Swapped to the other side of the road due to rock."
-                rows="2"
-                className="block w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-              />
-            </div>
-            
-            <div className="flex items-center">
-              <input
-                id="hasSideSwap"
-                type="checkbox"
-                checked={hasSideSwap}
-                onChange={(e) => setHasSideSwap(e.target.checked)}
-                className="h-5 w-5 text-purple-600 focus:ring-purple-500 border-slate-300 rounded"
-              />
-              <label htmlFor="hasSideSwap" className="ml-3 block text-sm font-semibold text-slate-700">
-                Map this Side Swap with GPS Coordinates
-              </label>
-            </div>
-            
-            {hasSideSwap && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4 p-4 bg-white rounded-lg border border-slate-200">
-                {/* Start GPS */}
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <label className="block text-sm font-bold text-slate-700">Start Swap GPS</label>
-                    <button 
-                      type="button" 
-                      onClick={() => handleGetLocation('start')}
-                      className="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded text-purple-700 bg-purple-100 hover:bg-purple-200 focus:outline-none"
-                    >
-                      <MapPin className="h-3 w-3 mr-1" />
-                      Get Location
-                    </button>
-                  </div>
-                  <div className="flex space-x-2">
-                    <input type="number" step="any" placeholder="Lat" value={swapStartLat} onChange={e => setSwapStartLat(e.target.value)} className="w-full px-3 py-2 text-sm rounded border border-slate-300 focus:ring-1 focus:ring-purple-500" />
-                    <input type="number" step="any" placeholder="Lng" value={swapStartLng} onChange={e => setSwapStartLng(e.target.value)} className="w-full px-3 py-2 text-sm rounded border border-slate-300 focus:ring-1 focus:ring-purple-500" />
-                  </div>
-                </div>
-
-                {/* End GPS */}
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <label className="block text-sm font-bold text-slate-700">End Swap GPS</label>
-                    <button 
-                      type="button" 
-                      onClick={() => handleGetLocation('end')}
-                      className="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded text-purple-700 bg-purple-100 hover:bg-purple-200 focus:outline-none"
-                    >
-                      <MapPin className="h-3 w-3 mr-1" />
-                      Get Location
-                    </button>
-                  </div>
-                  <div className="flex space-x-2">
-                    <input type="number" step="any" placeholder="Lat" value={swapEndLat} onChange={e => setSwapEndLat(e.target.value)} className="w-full px-3 py-2 text-sm rounded border border-slate-300 focus:ring-1 focus:ring-purple-500" />
-                    <input type="number" step="any" placeholder="Lng" value={swapEndLng} onChange={e => setSwapEndLng(e.target.value)} className="w-full px-3 py-2 text-sm rounded border border-slate-300 focus:ring-1 focus:ring-purple-500" />
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Image Upload Area */}
+        {/* Image Upload */}
         <div className="bg-slate-50 p-6 rounded-xl border border-slate-100">
           <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 border-b border-slate-200 pb-3">Redline Image Upload</h3>
           
-          <div className="mt-2 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-300 border-dashed rounded-xl bg-white hover:bg-slate-50 transition-colors">
-            {imagePreview ? (
-              <div className="relative w-full max-w-sm">
-                <img src={imagePreview} alt="Redline Preview" className="rounded-lg shadow-sm border border-slate-200" />
+          {!imagePreview ? (
+            <div 
+              className="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center bg-white hover:bg-slate-50 transition-colors cursor-pointer"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <Upload className="mx-auto h-12 w-12 text-slate-400 mb-4" />
+              <div className="text-sm font-medium text-slate-700 mb-1">
+                Click to upload or take a picture
+              </div>
+              <p className="text-xs text-slate-500">
+                Supports JPG, PNG (Max 5MB)
+              </p>
+            </div>
+          ) : (
+            <div className="relative rounded-xl border-2 border-purple-200 overflow-hidden bg-white">
+              <div className="absolute top-2 right-2 z-10 flex gap-2">
                 <button
                   type="button"
-                  onClick={() => { setImagePreview(null); setImageData(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}
-                  className="absolute -top-3 -right-3 bg-red-100 hover:bg-red-200 text-red-600 rounded-full p-1.5 shadow-sm transition-colors"
+                  onClick={() => {
+                    setImagePreview(null);
+                    setImageData(null);
+                    if (fileInputRef.current) fileInputRef.current.value = '';
+                  }}
+                  className="bg-white/90 p-2 rounded-full shadow-md text-red-500 hover:text-red-600 hover:bg-white transition-colors"
                 >
                   <X className="h-5 w-5" />
                 </button>
               </div>
-            ) : (
-              <div className="space-y-2 text-center py-8 w-full cursor-pointer" onClick={() => fileInputRef.current?.click()}>
-                <Upload className="mx-auto h-10 w-10 text-purple-400" />
-                <div className="flex justify-center text-sm text-slate-600">
-                  <span className="relative cursor-pointer bg-white rounded-md font-semibold text-purple-600 hover:text-purple-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-purple-500">
-                    <span>Upload a file</span>
-                    <input ref={fileInputRef} id="file-upload" name="file-upload" type="file" accept="image/*" className="sr-only" onChange={handleFileChange} />
-                  </span>
-                  <p className="pl-1">or drag and drop</p>
-                </div>
-                <p className="text-xs text-slate-500">PNG, JPG, GIF up to 10MB</p>
+              <img src={imagePreview} alt="Redline Preview" className="w-full h-auto max-h-[600px] object-contain" />
+              <div className="bg-purple-50 p-3 border-t border-purple-100 flex items-center justify-center text-sm font-medium text-purple-700">
+                <ImageIcon className="h-4 w-4 mr-2" /> Image Attached Successfully
               </div>
-            )}
-          </div>
-        </div>
-        
-        {/* Submit */}
-        <div className="pt-6 border-t border-slate-200 mt-8">
-          <button
-            type="submit"
-            className="w-full flex justify-center items-center py-3.5 px-4 border border-transparent rounded-xl shadow-md text-lg font-bold text-white bg-purple-600 hover:bg-purple-700 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-all duration-200 active:scale-95"
-          >
-            Upload Redline
-          </button>
-          
-          {successMsg && (
-            <div className="mt-4 p-4 bg-green-50 rounded-lg border border-green-200 text-green-700 flex items-center animate-in fade-in slide-in-from-bottom-2">
-              <ImageIcon className="h-5 w-5 mr-2 text-green-500" />
-              <p className="font-semibold text-sm">Redline successfully uploaded to master file!</p>
             </div>
           )}
+          <input
+            type="file"
+            accept="image/*"
+            className="hidden"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+          />
+        </div>
+
+        {successMsg && (
+          <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm font-medium flex items-center">
+            Redline uploaded successfully!
+          </div>
+        )}
+
+        <div className="flex justify-end pt-4">
+          <button type="submit" className="px-6 py-3 bg-purple-600 text-white font-bold rounded-lg shadow hover:bg-purple-700 transition-colors">
+            Upload Redline
+          </button>
         </div>
       </form>
     </div>

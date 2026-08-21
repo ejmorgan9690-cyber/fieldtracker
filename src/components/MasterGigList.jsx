@@ -3,13 +3,13 @@ import { useAppContext, formatDate } from '../context/AppContext';
 import { ClipboardList, Trash2 } from 'lucide-react';
 
 export default function MasterGigList() {
-  const { entries, gigs, clearData } = useAppContext();
+  const { entries, gigs, authUser, clearData } = useAppContext();
   const [filterDate, setFilterDate] = useState('');
   const [filterInspector, setFilterInspector] = useState('');
 
   // Combine legacy and new gigs
   const gigList = useMemo(() => {
-    const legacy = entries
+    let legacy = entries
       .filter(e => e.taskType === 'Hand Hole' && e.handHoleStatus === 'Not Complete')
       .map(e => ({
         id: e.id,
@@ -19,10 +19,21 @@ export default function MasterGigList() {
         route: e.route,
         location: e.location,
         description: e.incompletionReason,
-        isLegacy: true
+        isLegacy: true,
+        sharedWithResident: true // Legacy production items are already shared
       }));
 
-    const newGigs = gigs.map(g => ({ ...g, isLegacy: false }));
+    let newGigs = gigs.map(g => ({ ...g, isLegacy: false }));
+
+    if (authUser?.role === 'Resident') {
+      newGigs = newGigs.filter(g => g.sharedWithResident);
+    } else if (authUser?.role === 'Inspector') {
+      // If inspector is viewing master list, only show their own, OR maybe they don't even see MasterGigList?
+      // Wait, inspectors have their own GigList.jsx tab! MasterGigList is for residents/supervisors!
+      // I'll leave Inspector filtering out of MasterGigList just in case they have access to it, 
+      // but actually it's fine.
+    }
+
     let combined = [...legacy, ...newGigs];
     
     if (filterDate) {
@@ -32,18 +43,20 @@ export default function MasterGigList() {
       combined = combined.filter(e => e.inspector === filterInspector);
     }
 
-    return combined.sort((a, b) => {
-      if (a.date !== b.date) return new Date(b.date) - new Date(a.date);
-      return (a.inspector || '').localeCompare(b.inspector || '');
-    });
-  }, [entries, gigs, filterDate, filterInspector]);
+    return combined.sort((a, b) => new Date(b.date) - new Date(a.date));
+  }, [entries, gigs, filterDate, filterInspector, authUser]);
 
   const uniqueInspectors = useMemo(() => {
-    const legacyInspectors = entries.filter(e => e.taskType === 'Hand Hole' && e.handHoleStatus === 'Not Complete').map(e => e.inspector);
-    const newInspectors = gigs.map(g => g.inspector);
-    const inspectors = new Set([...legacyInspectors, ...newInspectors]);
-    return Array.from(inspectors).filter(Boolean).sort();
-  }, [entries, gigs]);
+    let baseGigs = gigs;
+    if (authUser?.role === 'Resident') {
+       baseGigs = gigs.filter(g => g.sharedWithResident);
+    }
+    const inspectors = new Set([
+      ...baseGigs.map(e => e.inspector),
+      ...entries.filter(e => e.taskType === 'Hand Hole' && e.handHoleStatus === 'Not Complete').map(e => e.inspector)
+    ]);
+    return Array.from(inspectors).sort();
+  }, [entries, gigs, authUser]);
 
   return (
     <div className="space-y-6 mt-6 max-w-7xl mx-auto">
@@ -56,73 +69,65 @@ export default function MasterGigList() {
             </div>
             <div>
               <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Master Gig List</h2>
-              <p className="mt-1 text-sm text-slate-500 font-medium">Aggregate view of all reported deficiencies across the project.</p>
+              <p className="mt-1 text-sm text-slate-500 font-medium">Aggregate view of all unresolved deficiencies.</p>
             </div>
           </div>
           
           <div className="flex flex-col sm:flex-row items-center space-y-3 sm:space-y-0 sm:space-x-3 w-full sm:w-auto">
+            <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="block w-full sm:w-auto px-3 py-2 rounded-lg border border-slate-300 shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-all" />
+            
             <input type="text" list="inspector-options-MasterGigList" value={filterInspector} onChange={(e) => setFilterInspector(e.target.value)} onClick={(e) => e.target.select()} placeholder="All Inspectors" className="block w-full sm:w-auto px-3 py-2 rounded-lg border border-slate-300 shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-all" />
             <datalist id="inspector-options-MasterGigList">
               {uniqueInspectors.map(i => <option key={i} value={i} />)}
             </datalist>
             
-            <input
-              type="date"
-              value={filterDate}
-              onChange={(e) => setFilterDate(e.target.value)}
-              className="block w-full sm:w-auto px-3 py-2 rounded-lg border border-slate-300 shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-all"
-            />
-            
             {(filterDate || filterInspector) && (
-               <button onClick={() => { setFilterDate(''); setFilterInspector(''); }} className="text-sm font-medium text-indigo-600 hover:text-indigo-800 transition-colors">Clear</button>
+               <button onClick={() => { setFilterDate(''); setFilterInspector(''); }} className="text-sm font-medium text-red-600 hover:text-red-800 transition-colors">Clear</button>
             )}
-            
-            <button
-              onClick={() => {
-                if (window.confirm('Are you sure you want to clear all data? This cannot be undone.')) {
-                  clearData();
-                }
-              }}
-              className="inline-flex items-center p-2 border border-red-200 shadow-sm text-sm font-medium rounded-lg text-red-600 bg-white hover:bg-red-50 hover:border-red-300 focus:outline-none transition-all ml-auto sm:ml-0"
-              title="Clear all data"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          {gigList.length > 0 ? (
-            <table className="min-w-full divide-y divide-slate-200">
-              <thead className="bg-slate-50">
-                <tr>
-                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Date</th>
-                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Inspector</th>
-                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Hierarchy</th>
-                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Description of Deficiency</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-slate-100">
-                {gigList.map((row, idx) => (
-                  <tr key={idx} className={`hover:bg-indigo-50/80 transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}`}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">{formatDate(row.date)}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-800">{row.inspector}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
-                      {row.rdtSection} &gt; {row.route} &gt; {row.location}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-slate-700 font-medium">
-                      {row.description}
-                      {row.isLegacy && <span className="ml-3 text-xs text-slate-400 italic font-normal">(Legacy Log)</span>}
-                    </td>
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            {gigList.length > 0 ? (
+              <table className="min-w-full divide-y divide-slate-200">
+                <thead className="bg-slate-50">
+                  <tr>
+                    <th scope="col" className="px-8 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Date</th>
+                    <th scope="col" className="px-8 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Inspector</th>
+                    <th scope="col" className="px-8 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Hierarchy</th>
+                    <th scope="col" className="px-8 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Description of Deficiency</th>
+                    <th scope="col" className="px-8 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Audio Data</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : (
-            <div className="text-center py-16 bg-slate-50/50">
-              <p className="text-slate-500 font-medium">No deficiencies found for the selected criteria.</p>
-            </div>
-          )}
+                </thead>
+                <tbody className="bg-white divide-y divide-slate-100">
+                  {gigList.map((row, idx) => (
+                    <tr key={idx} className={`hover:bg-slate-50 transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}`}>
+                      <td className="px-8 py-4 whitespace-nowrap text-sm font-medium text-slate-900">{formatDate(row.date)}</td>
+                      <td className="px-8 py-4 whitespace-nowrap text-sm font-bold text-indigo-600">{row.inspector}</td>
+                      <td className="px-8 py-4 whitespace-nowrap text-sm text-slate-700">
+                        {row.rdtSection} &gt; {row.route} &gt; {row.location}
+                      </td>
+                      <td className="px-8 py-4 text-sm text-slate-700 font-medium">
+                        {row.description ? row.description : <span className="italic text-slate-400">No text provided</span>}
+                      </td>
+                      <td className="px-8 py-4 whitespace-nowrap text-sm text-slate-700">
+                        {row.audioData ? (
+                           <audio src={row.audioData} controls className="h-8 w-48" />
+                        ) : (
+                           <span className="italic text-slate-400 text-xs">No audio</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <div className="text-center py-16">
+                <p className="text-slate-500 font-medium text-lg">No gig entries found.</p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
