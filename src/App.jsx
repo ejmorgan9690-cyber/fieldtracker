@@ -18,9 +18,14 @@ import PendingReview from './components/PendingReview';
 import AcceptedLogFeed from './components/AcceptedLogFeed';
 import MasterUnitSheet from './components/MasterUnitSheet';
 import MapRoute from './components/MapRoute';
+import StakingDashboard from './components/staking/StakingDashboard';
+import { LayoutGrid, MapPin } from 'lucide-react';
+
 
 const MainContent = () => {
   const { authUser, activeTab } = useAppContext();
+  const [appMode, setAppMode] = React.useState('field-tracker');
+
 
   if (!authUser) {
     return <Login />;
@@ -30,7 +35,24 @@ const MainContent = () => {
   const isMapTab = activeTab === 'map';
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
+    
+    <div className="min-h-screen bg-slate-50 font-sans text-slate-900 flex flex-col">
+      <div className="bg-slate-900 text-white px-4 py-2 flex justify-between items-center text-xs sm:text-sm shadow-md z-50">
+        <div className="font-bold flex items-center tracking-wider">
+           <span className="text-emerald-400 mr-2">♦</span> COMPANY PORTAL
+        </div>
+        <div className="flex space-x-2">
+           <button onClick={() => setAppMode('field-tracker')} className={`px-3 py-1.5 rounded flex items-center transition-colors ${appMode === 'field-tracker' ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`}>
+             <LayoutGrid className="h-4 w-4 mr-1.5 hidden sm:block" /> Tracker
+           </button>
+           <button onClick={() => setAppMode('staking')} className={`px-3 py-1.5 rounded flex items-center transition-colors ${appMode === 'staking' ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`}>
+             <MapPin className="h-4 w-4 mr-1.5 hidden sm:block" /> Staking
+           </button>
+        </div>
+      </div>
+      {appMode === 'field-tracker' ? (
+        <>
+
       <Navigation />
       <main className={isMapTab ? "" : "max-w-7xl mx-auto p-4 sm:p-6 lg:p-8"}>
         {activeTab === 'map' && <MapRoute />}
@@ -59,7 +81,12 @@ const MainContent = () => {
         {authUser.role === 'Resident' && activeTab === 'master_gig_list' && <MasterGigList />}
         {authUser.role === 'Resident' && activeTab === 'master_drops' && <MasterDrops />}
       </main>
+        </>
+      ) : (
+        <StakingDashboard />
+      )}
     </div>
+
   );
 };
 
