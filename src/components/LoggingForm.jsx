@@ -186,10 +186,15 @@ export default function LoggingForm() {
   const [voiceData, setVoiceData] = useState({});
 
   const recognitionRef = useRef(null);
+  const manuallyStoppedRef = useRef(false);
+  const transcriptRef = useRef('');
 
   const startVoiceRecognition = () => {
     setShowVoiceModal(true);
     setVoiceTranscript('');
+    transcriptRef.current = '';
+    manuallyStoppedRef.current = false;
+    
     setVoiceData({
       town: town,
       rdtSection: rdtSection,
@@ -207,37 +212,46 @@ export default function LoggingForm() {
       return;
     }
     
-    // Always abort any stuck instance
+    // Abort any old instance just in case
     if (recognitionRef.current) {
       try { recognitionRef.current.abort(); } catch (e) {}
     }
 
-    // Always create a FRESH instance for each session
     const recognition = new SpeechRecognition();
     recognition.continuous = true;
-    recognition.interimResults = false; // Turn off interim to stop spammy word repeats
+    recognition.interimResults = false;
     recognition.lang = 'en-US';
 
     recognition.onstart = () => setIsListening(true);
     
     recognition.onresult = (event) => {
-      let fullTranscript = '';
-      for (let i = 0; i < event.results.length; i++) {
-        fullTranscript += event.results[i][0].transcript + ' ';
+      let newPhrases = '';
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        newPhrases += event.results[i][0].transcript + ' ';
       }
-      setVoiceTranscript(fullTranscript);
-      parseVoiceTranscript(fullTranscript);
+      transcriptRef.current += newPhrases;
+      setVoiceTranscript(transcriptRef.current);
+      parseVoiceTranscript(transcriptRef.current);
     };
     
     recognition.onerror = (event) => {
-      console.error("Speech error:", event.error);
-      setIsListening(false);
-      if (event.error !== 'aborted') {
-        alert("Microphone error: " + event.error);
+      if (event.error !== 'aborted' && event.error !== 'no-speech') {
+        console.error("Speech error:", event.error);
       }
     };
     
-    recognition.onend = () => setIsListening(false);
+    recognition.onend = () => {
+      // If the browser killed it due to silence, but we didn't hit cancel/submit, turn it right back on!
+      if (!manuallyStoppedRef.current) {
+        try {
+          recognition.start();
+        } catch (e) {
+          setIsListening(false);
+        }
+      } else {
+        setIsListening(false);
+      }
+    };
 
     recognitionRef.current = recognition;
 
@@ -249,6 +263,7 @@ export default function LoggingForm() {
   };
 
   const stopVoiceRecognition = () => {
+    manuallyStoppedRef.current = true;
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
