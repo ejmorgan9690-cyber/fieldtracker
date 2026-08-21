@@ -352,12 +352,18 @@ export default function LoggingForm() {
     if (lower.includes('toll south')) parsed.rdtSection = 'Toll S';
 
     const routeMatch = lower.match(/route\s*(\d+)/);
-    if (routeMatch) parsed.route = String(routeMatch[1]);
+    if (routeMatch) {
+      parsed.route = String(routeMatch[1]);
+      lower = lower.replace(routeMatch[0], ''); // Scrub to prevent number cross-talk
+    }
 
     const locMatch = lower.match(/location\s*(\d+)/);
-    if (locMatch) parsed.location = String(locMatch[1]);
+    if (locMatch) {
+      parsed.location = String(locMatch[1]);
+      lower = lower.replace(locMatch[0], ''); // Scrub to prevent number cross-talk
+    }
 
-    if (lower.includes('bore') || lower.includes('board') || lower.includes('boar') || lower.includes('four')) parsed.taskType = 'Bore';
+    if (lower.includes('bore') || lower.includes('board') || lower.includes('boar')) parsed.taskType = 'Bore';
     else if (lower.includes('trench')) parsed.taskType = 'Trench';
     else if (lower.includes('plow')) parsed.taskType = 'Plow Duct';
     else if (lower.includes('fiber')) parsed.taskType = 'Fiber';
@@ -387,7 +393,7 @@ export default function LoggingForm() {
       if (lower.includes('dirt')) parsed.unitCode = 'BM61D';
       if (lower.includes('rock')) parsed.unitCode = 'BM61R';
     } else if (parsed.taskType === 'Plow Duct') {
-      const plowMatch = lower.match(/\b([1234])\b\s*(?:duct|pipe|conduit|plow)\b/) || lower.match(/\b(?:duct|pipe|conduit|plow)\s*\b([1234])\b/);
+      const plowMatch = lower.match(/\b([1234])\b\s*(?:duct|pipe|conduit)\b/) || lower.match(/\b(?:duct|pipe|conduit|plow)\s*\b([1234])\b/);
       if (plowMatch && plowMatch[1]) {
          parsed.unitCode = `BFOV (1.25)(${plowMatch[1]})`;
       }
