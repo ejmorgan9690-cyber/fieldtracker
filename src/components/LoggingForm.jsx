@@ -185,35 +185,70 @@ export default function LoggingForm() {
   const [voiceTranscript, setVoiceTranscript] = useState('');
   const [voiceData, setVoiceData] = useState({});
 
+  const recognitionRef = useRef(null);
+
   const startVoiceRecognition = () => {
+    setShowVoiceModal(true);
+    setVoiceTranscript('');
+    setVoiceData({
+      town: town,
+      rdtSection: rdtSection,
+      route: '',
+      location: '',
+      taskType: 'Bore',
+      specNumber: '1',
+      footage: '',
+      gpsCoordinates: ''
+    });
+
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
       alert("Your browser does not support Voice-to-Text. Please use Chrome or Safari.");
       return;
     }
-    const recognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.lang = 'en-US';
+    
+    if (!recognitionRef.current) {
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = true;
+      recognitionRef.current.interimResults = true;
+      recognitionRef.current.lang = 'en-US';
 
-    recognition.onstart = () => setIsListening(true);
-    
-    recognition.onresult = (event) => {
-      const text = event.results[0][0].transcript;
-      setVoiceTranscript(text);
-      parseVoiceTranscript(text);
-      setShowVoiceModal(true);
-    };
-    
-    recognition.onerror = (event) => {
-      console.error("Speech error:", event.error);
-      setIsListening(false);
-      alert("Microphone error: " + event.error);
-    };
-    
-    recognition.onend = () => setIsListening(false);
-    
-    recognition.start();
+      recognitionRef.current.onstart = () => setIsListening(true);
+      
+      recognitionRef.current.onresult = (event) => {
+        let fullTranscript = '';
+        for (let i = 0; i < event.results.length; i++) {
+          fullTranscript += event.results[i][0].transcript + ' ';
+        }
+        setVoiceTranscript(fullTranscript);
+        parseVoiceTranscript(fullTranscript);
+      };
+      
+      recognitionRef.current.onerror = (event) => {
+        console.error("Speech error:", event.error);
+        setIsListening(false);
+        if (event.error !== 'aborted') {
+          alert("Microphone error: " + event.error);
+        }
+      };
+      
+      recognitionRef.current.onend = () => setIsListening(false);
+    }
+
+    try {
+      recognitionRef.current.start();
+    } catch (e) {
+      console.warn("Recognition already started");
+    }
+  };
+
+  const stopVoiceRecognition = () => {
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch (e) {}
+    }
+    setIsListening(false);
   };
 
   const parseVoiceTranscript = (text) => {
@@ -293,6 +328,7 @@ export default function LoggingForm() {
       gpsCoordinates: voiceData.gpsCoordinates,
       inspector: authUser.name
     });
+    stopVoiceRecognition();
     setShowVoiceModal(false);
     setSuccessMsg(true);
     setTimeout(() => setSuccessMsg(false), 3000);
@@ -400,7 +436,7 @@ export default function LoggingForm() {
       {showVoiceModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 relative animate-in fade-in zoom-in duration-200">
-            <button onClick={() => setShowVoiceModal(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors">
+            <button onClick={() => { setShowVoiceModal(false); stopVoiceRecognition(); }} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors">
               <X className="h-6 w-6" />
             </button>
             <h3 className="text-xl font-bold text-slate-800 mb-1 flex items-center">
@@ -461,7 +497,7 @@ export default function LoggingForm() {
             </div>
             
             <div className="flex space-x-3 pt-2">
-              <button onClick={() => setShowVoiceModal(false)} className="flex-1 py-3 bg-white border border-slate-300 rounded-xl text-slate-700 font-bold hover:bg-slate-50 transition-colors">Cancel</button>
+              <button onClick={() => { setShowVoiceModal(false); stopVoiceRecognition(); }} className="flex-1 py-3 bg-white border border-slate-300 rounded-xl text-slate-700 font-bold hover:bg-slate-50 transition-colors">Cancel</button>
               <button onClick={submitVoiceLog} className="flex-1 py-3 bg-indigo-600 rounded-xl text-white font-bold hover:bg-indigo-700 transition-colors flex items-center justify-center">
                 <CheckCircle className="h-5 w-5 mr-2" /> Submit Log
               </button>
