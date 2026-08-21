@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAppContext } from '../context/AppContext';
-import { Mic, MapPin, Trash2, Calendar, User, FileText } from 'lucide-react';
+import { Mic, MapPin, Trash2, Calendar, User, FileText, Search } from 'lucide-react';
 
 export default function MasterNotes() {
   const { notes, authUser, deleteNote } = useAppContext();
+  const [compactView, setCompactView] = useState(false);
 
   // Sort and filter notes by newest first, strictly locked to the current inspector
   const sortedNotes = [...(notes || [])]
@@ -13,14 +14,24 @@ export default function MasterNotes() {
   return (
     <div className="max-w-7xl mx-auto">
       <div className="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
-        <div className="bg-slate-800 px-6 py-6 border-b border-slate-700 flex justify-between items-center">
+        <div className="bg-slate-800 px-6 py-6 border-b border-slate-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h2 className="text-2xl font-bold text-white mb-1">Master Notes Log</h2>
-            <p className="text-slate-400 text-sm">All text and audio notes submitted by inspectors.</p>
+            <h2 className="text-2xl font-bold text-white mb-1">Notes Feed</h2>
+            <p className="text-slate-400 text-sm">Your private field notes and audio recordings.</p>
           </div>
-          <div className="bg-slate-700 rounded-lg px-4 py-2">
-            <span className="text-xl font-bold text-white">{sortedNotes.length}</span>
-            <span className="text-slate-300 ml-2 text-sm uppercase tracking-wider">Total Notes</span>
+          <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+            <button
+              onClick={() => setCompactView(!compactView)}
+              className={`hidden sm:hidden md:hidden lg:hidden xl:hidden min-[300px]:flex px-3 py-1.5 text-xs font-bold rounded-lg border transition-colors items-center ${compactView ? 'bg-indigo-500 text-white border-indigo-500' : 'bg-slate-700 text-slate-300 border-slate-600 hover:bg-slate-600'}`}
+              title="Toggle Zoom Out"
+            >
+              <Search className="w-3 h-3 mr-1.5" />
+              {compactView ? 'Zoomed Out' : 'Zoom Out'}
+            </button>
+            <div className="bg-slate-700 rounded-lg px-4 py-2 flex items-center">
+              <span className="text-xl font-bold text-white">{sortedNotes.length}</span>
+              <span className="text-slate-300 ml-2 text-sm uppercase tracking-wider">Total</span>
+            </div>
           </div>
         </div>
 
@@ -31,57 +42,57 @@ export default function MasterNotes() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200">
+            <table className={`min-w-full divide-y divide-slate-200 ${compactView ? 'text-xs' : ''}`}>
               <thead className="bg-slate-50">
                 <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Date</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Inspector</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Note Content</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Audio Recording</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">GPS</th>
-                  <th scope="col" className="relative px-6 py-3"><span className="sr-only">Actions</span></th>
+                  <th scope="col" className={`${compactView ? 'px-2 py-2 text-[10px]' : 'px-6 py-3 text-xs'} text-left font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap`}>Date</th>
+                  <th scope="col" className={`${compactView ? 'px-2 py-2 text-[10px]' : 'px-6 py-3 text-xs'} text-left font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap`}>Inspector</th>
+                  <th scope="col" className={`${compactView ? 'px-2 py-2 text-[10px]' : 'px-6 py-3 text-xs'} text-left font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap`}>Note Content</th>
+                  <th scope="col" className={`${compactView ? 'px-2 py-2 text-[10px]' : 'px-6 py-3 text-xs'} text-left font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap`}>Audio Recording</th>
+                  <th scope="col" className={`${compactView ? 'px-2 py-2 text-[10px]' : 'px-6 py-3 text-xs'} text-left font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap`}>GPS</th>
+                  <th scope="col" className={`${compactView ? 'px-2 py-2 text-[10px]' : 'px-6 py-3 text-xs'} relative`}><span className="sr-only">Actions</span></th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-slate-200">
                 {sortedNotes.map((note) => (
                   <tr key={note.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center text-sm text-slate-900 font-bold mb-1">
-                        <Calendar className="h-4 w-4 mr-2 text-slate-400" />
+                    <td className={`${compactView ? 'px-2 py-2' : 'px-6 py-4'} whitespace-nowrap`}>
+                      <div className={`flex items-center font-bold mb-1 text-slate-900 ${compactView ? 'text-[10px]' : 'text-sm'}`}>
+                        <Calendar className={`${compactView ? 'h-3 w-3' : 'h-4 w-4'} mr-2 text-slate-400`} />
                         {note.service_date}
                       </div>
                       {note.town && note.town !== 'N/A' && (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 mt-1">
+                        <span className={`inline-flex items-center rounded-full font-medium bg-indigo-100 text-indigo-800 mt-1 ${compactView ? 'px-1.5 py-0.5 text-[9px]' : 'px-2.5 py-0.5 text-xs'}`}>
                           {note.town}
                         </span>
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center text-sm font-semibold text-slate-700">
-                        <User className="h-4 w-4 mr-2 text-slate-400" />
+                    <td className={`${compactView ? 'px-2 py-2' : 'px-6 py-4'} whitespace-nowrap`}>
+                      <div className={`flex items-center font-semibold text-slate-700 ${compactView ? 'text-[10px]' : 'text-sm'}`}>
+                        <User className={`${compactView ? 'h-3 w-3' : 'h-4 w-4'} mr-2 text-slate-400`} />
                         {note.inspector_name}
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm text-slate-700 italic max-w-sm whitespace-pre-wrap">
+                    <td className={`${compactView ? 'px-2 py-2' : 'px-6 py-4'}`}>
+                      <div className={`text-slate-700 italic max-w-sm whitespace-pre-wrap ${compactView ? 'text-[10px] leading-tight' : 'text-sm'}`}>
                         {note.notes_text ? `"${note.notes_text}"` : <span className="text-slate-400 not-italic">No text provided</span>}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className={`${compactView ? 'px-2 py-2' : 'px-6 py-4'} whitespace-nowrap`}>
                       {note.audio_data ? (
                         <div className="flex items-center">
-                          <audio src={note.audio_data} controls className="h-8 w-48" />
+                          <audio src={note.audio_data} controls className={`${compactView ? 'h-6 w-32 scale-90 origin-left' : 'h-8 w-48'}`} />
                         </div>
                       ) : (
-                        <span className="text-sm text-slate-400 flex items-center">
-                          <Mic className="h-4 w-4 mr-1 opacity-50" /> No audio
+                        <span className={`text-slate-400 flex items-center ${compactView ? 'text-[10px]' : 'text-sm'}`}>
+                          <Mic className={`${compactView ? 'h-3 w-3' : 'h-4 w-4'} mr-1 opacity-50`} /> No audio
                         </span>
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className={`${compactView ? 'px-2 py-2' : 'px-6 py-4'} whitespace-nowrap`}>
                       {note.gps_coordinates ? (
-                        <div className="text-sm text-slate-600 flex items-center font-mono text-xs">
-                          <MapPin className="h-4 w-4 mr-1 text-slate-400" />
+                        <div className={`text-slate-600 flex items-center font-mono ${compactView ? 'text-[9px]' : 'text-xs'}`}>
+                          <MapPin className={`${compactView ? 'h-3 w-3' : 'h-4 w-4'} mr-1 text-slate-400`} />
                           <a 
                             href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(note.gps_coordinates)}`}
                             target="_blank"
@@ -92,10 +103,10 @@ export default function MasterNotes() {
                           </a>
                         </div>
                       ) : (
-                        <span className="text-sm text-slate-400">-</span>
+                        <span className={`text-slate-400 ${compactView ? 'text-[10px]' : 'text-sm'}`}>-</span>
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <td className={`${compactView ? 'px-2 py-2' : 'px-6 py-4'} whitespace-nowrap text-right text-sm font-medium`}>
                       {(authUser?.role === 'Supervisor' || authUser?.name === note.inspector_name) && (
                         <button
                           onClick={() => {
@@ -103,10 +114,10 @@ export default function MasterNotes() {
                               deleteNote(note.id);
                             }
                           }}
-                          className="text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-50 transition-colors"
+                          className={`text-red-500 hover:text-red-700 rounded-full hover:bg-red-50 transition-colors ${compactView ? 'p-1' : 'p-2'}`}
                           title="Delete Note"
                         >
-                          <Trash2 className="h-5 w-5" />
+                          <Trash2 className={`${compactView ? 'h-4 w-4' : 'h-5 w-5'}`} />
                         </button>
                       )}
                     </td>
