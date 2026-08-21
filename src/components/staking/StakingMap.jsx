@@ -3,7 +3,7 @@ import { useAppContext } from '../../context/AppContext';
 import { MapContainer, TileLayer, Marker, Popup, GeoJSON } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { kml } from '@tmcw/togeojson';
-import { Upload, FileUp, X, MapPin, Image as ImageIcon } from 'lucide-react';
+import { Upload, FileUp, X, MapPin, Image as ImageIcon, DownloadCloud } from 'lucide-react';
 import L from 'leaflet';
 
 // Fix for default Leaflet icon issues in React
@@ -30,6 +30,7 @@ export default function StakingMap() {
   
   // Blueprint photo state
   const [blueprintImage, setBlueprintImage] = useState(null);
+  const [selectedPreloaded, setSelectedPreloaded] = useState('');
 
   const [mapCenter, setMapCenter] = useState([36.0, -96.0]);
   const [mapZoom, setMapZoom] = useState(13);
@@ -43,43 +44,68 @@ export default function StakingMap() {
     }
   }, [stakingPoints]);
 
+  const processKmlText = (kmlText) => {
+    try {
+      const dom = new DOMParser().parseFromString(kmlText, 'text/xml');
+      const converted = kml(dom);
+      setGeoJsonData(converted);
+      
+      // Try to automatically center map on the newly loaded KML
+      if (converted.features && converted.features.length > 0) {
+        const firstFeature = converted.features[0];
+        let coords = null;
+        if (firstFeature.geometry.type === 'Point') {
+          coords = [firstFeature.geometry.coordinates[1], firstFeature.geometry.coordinates[0]];
+        } else if (firstFeature.geometry.type === 'LineString' || firstFeature.geometry.type === 'Polygon') {
+          const firstCoord = firstFeature.geometry.coordinates[0];
+          if (Array.isArray(firstCoord[0])) {
+             coords = [firstCoord[0][1], firstCoord[0][0]];
+          } else {
+             coords = [firstCoord[1], firstCoord[0]];
+          }
+        }
+        if (coords && !isNaN(coords[0]) && !isNaN(coords[1])) {
+          setMapCenter(coords);
+          if (mapRef.current) {
+            mapRef.current.flyTo(coords, 14);
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Error parsing KML:", err);
+      alert("Failed to parse KML file. Please ensure it is valid.");
+    }
+  };
+
   const handleKmlUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
     const reader = new FileReader();
     reader.onload = (event) => {
-      try {
-        const kmlText = event.target.result;
-        const dom = new DOMParser().parseFromString(kmlText, 'text/xml');
-        const converted = kml(dom);
-        setGeoJsonData(converted);
-        
-        // Try to automatically center map on the newly loaded KML
-        if (converted.features && converted.features.length > 0) {
-          const firstFeature = converted.features[0];
-          let coords = null;
-          if (firstFeature.geometry.type === 'Point') {
-            coords = [firstFeature.geometry.coordinates[1], firstFeature.geometry.coordinates[0]];
-          } else if (firstFeature.geometry.type === 'LineString' || firstFeature.geometry.type === 'Polygon') {
-            const firstCoord = firstFeature.geometry.coordinates[0];
-            // Handle nested coordinates in polygons
-            if (Array.isArray(firstCoord[0])) {
-               coords = [firstCoord[0][1], firstCoord[0][0]];
-            } else {
-               coords = [firstCoord[1], firstCoord[0]];
-            }
-          }
-          if (coords && !isNaN(coords[0]) && !isNaN(coords[1])) {
-            setMapCenter(coords);
-          }
-        }
-      } catch (err) {
-        console.error("Error parsing KML:", err);
-        alert("Failed to parse KML file. Please ensure it is valid.");
-      }
+      processKmlText(event.target.result);
+      setSelectedPreloaded(''); // Reset dropdown if manual file uploaded
     };
     reader.readAsText(file);
+  };
+
+  const loadPreloadedKml = async (filename) => {
+    setSelectedPreloaded(filename);
+    if (!filename) {
+      setGeoJsonData(null);
+      return;
+    }
+    
+    try {
+      const response = await fetch(`/kml/${filename}`);
+      if (!response.ok) throw new Error("Failed to load map");
+      const kmlText = await response.text();
+      processKmlText(kmlText);
+    } catch (error) {
+      console.error("Error loading preloaded map:", error);
+      alert("Could not load the selected map.");
+      setSelectedPreloaded('');
+    }
   };
 
   const handleImageUpload = (e) => {
@@ -100,6 +126,7 @@ export default function StakingMap() {
 
   const removeKml = () => {
     setGeoJsonData(null);
+    setSelectedPreloaded('');
   };
 
   const removeImage = () => {
@@ -116,19 +143,33 @@ export default function StakingMap() {
               <MapPin className="h-5 w-5 text-indigo-600 mr-2" /> Staking Map & Blueprints
             </h2>
             <p className="mt-1 text-xs sm:text-sm text-slate-500 max-w-lg">
-              Load an office KML to plot digital lines directly on the map, OR load a Hard Copy Photo to view the blueprint side-by-side with your live GPS location.
+              Select a pre-loaded office map, upload a custom KML, or upload a Hard Copy Photo to view side-by-side with your GPS location.
             </p>
           </div>
           
           <div className="flex flex-col sm:flex-row items-center space-y-3 sm:space-y-0 sm:space-x-3 w-full md:w-auto">
+             
              {!geoJsonData ? (
-               <label className="flex items-center px-4 py-2 bg-indigo-50 text-indigo-700 font-semibold rounded-lg hover:bg-indigo-100 transition-colors cursor-pointer w-full sm:w-auto justify-center shadow-sm">
-                 <FileUp className="h-4 w-4 mr-2" /> Upload KML
-                 <input type="file" accept=".kml" className="hidden" onChange={handleKmlUpload} />
-               </label>
+               <div className="flex flex-col sm:flex-row items-center w-full sm:w-auto gap-2">
+                 <select
+                   value={selectedPreloaded}
+                   onChange={(e) => loadPreloadedKml(e.target.value)}
+                   className="block w-full sm:w-auto px-3 py-2 text-sm rounded-lg border border-slate-300 bg-white text-slate-700 font-semibold shadow-sm focus:ring-2 focus:ring-indigo-500"
+                 >
+                   <option value="">-- Load Office Map --</option>
+                   <option value="KanOkla.kml">KanOkla Telephone</option>
+                 </select>
+                 <span className="text-slate-400 text-xs sm:hidden">or</span>
+                 <label className="flex items-center px-4 py-2 bg-indigo-50 text-indigo-700 font-semibold rounded-lg hover:bg-indigo-100 transition-colors cursor-pointer w-full sm:w-auto justify-center shadow-sm">
+                   <FileUp className="h-4 w-4 mr-2" /> Upload KML
+                   <input type="file" accept=".kml" className="hidden" onChange={handleKmlUpload} />
+                 </label>
+               </div>
              ) : (
-               <div className="flex items-center px-4 py-2 bg-slate-100 text-slate-700 font-semibold rounded-lg w-full sm:w-auto justify-between sm:justify-center border border-slate-200">
-                 <span className="truncate max-w-[150px] text-sm mr-3">KML Loaded</span>
+               <div className="flex items-center px-4 py-2 bg-slate-100 text-slate-700 font-semibold rounded-lg w-full sm:w-auto justify-between sm:justify-center border border-slate-200 shadow-sm">
+                 <span className="truncate max-w-[150px] text-sm mr-3">
+                   {selectedPreloaded ? selectedPreloaded : 'Custom KML Loaded'}
+                 </span>
                  <button onClick={removeKml} className="text-slate-400 hover:text-red-500 transition-colors" title="Remove KML">
                    <X className="h-4 w-4" />
                  </button>
@@ -141,7 +182,7 @@ export default function StakingMap() {
                  <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
                </label>
              ) : (
-               <div className="flex items-center px-4 py-2 bg-slate-100 text-slate-700 font-semibold rounded-lg w-full sm:w-auto justify-between sm:justify-center border border-slate-200">
+               <div className="flex items-center px-4 py-2 bg-slate-100 text-slate-700 font-semibold rounded-lg w-full sm:w-auto justify-between sm:justify-center border border-slate-200 shadow-sm">
                  <span className="truncate max-w-[150px] text-sm mr-3">Hard Copy Loaded</span>
                  <button onClick={removeImage} className="text-slate-400 hover:text-red-500 transition-colors" title="Remove Image">
                    <X className="h-4 w-4" />
