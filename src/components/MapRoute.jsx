@@ -715,13 +715,25 @@ export default function MapRoute() {
                 
                 // Geographic Midpoint using turf
                 let midCoord = startPos;
+                let bracketStart = [];
+                let bracketEnd = [];
+                
                 try {
-                  const line = turf.lineString([
-                    [startPos[1], startPos[0]],
-                    [endPos[1], endPos[0]]
-                  ]);
+                  const pt1 = turf.point([startPos[1], startPos[0]]);
+                  const pt2 = turf.point([endPos[1], endPos[0]]);
+                  const line = turf.lineString([pt1.geometry.coordinates, pt2.geometry.coordinates]);
+                  
+                  // Midpoint
                   const midPt = turf.along(line, turf.length(line, {units: 'feet'}) / 2, {units: 'feet'});
                   midCoord = [midPt.geometry.coordinates[1], midPt.geometry.coordinates[0]];
+                  
+                  // Perpendicular bracket ticks (30 feet inward)
+                  const bearing = turf.bearing(pt1, pt2);
+                  const startTick = turf.destination(pt1, 30, bearing - 90, {units: 'feet'});
+                  const endTick = turf.destination(pt2, 30, bearing - 90, {units: 'feet'});
+                  
+                  bracketStart = [startPos, [startTick.geometry.coordinates[1], startTick.geometry.coordinates[0]]];
+                  bracketEnd = [endPos, [endTick.geometry.coordinates[1], endTick.geometry.coordinates[0]]];
                 } catch (e) {
                   console.warn("Midpoint calc failed for side swap", e);
                 }
@@ -746,7 +758,9 @@ export default function MapRoute() {
 
                 return (
                   <React.Fragment key={`redline-swap-${redline.id}`}>
-                    <Polyline positions={[startPos, endPos]} pathOptions={{ color: '#dc2626', weight: 4, dashArray: '5, 5', opacity: 0.9 }} />
+                    <Polyline positions={[startPos, endPos]} pathOptions={{ color: '#dc2626', weight: 2, opacity: 0.8 }} />
+                    {bracketStart.length > 0 && <Polyline positions={bracketStart} pathOptions={{ color: '#dc2626', weight: 2, opacity: 0.8 }} />}
+                    {bracketEnd.length > 0 && <Polyline positions={bracketEnd} pathOptions={{ color: '#dc2626', weight: 2, opacity: 0.8 }} />}
                     <Marker position={midCoord} icon={icon} zIndexOffset={1000} />
                   </React.Fragment>
                 );
