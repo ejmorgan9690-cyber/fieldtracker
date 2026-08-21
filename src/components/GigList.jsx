@@ -1,10 +1,13 @@
 import React, { useMemo, useState, useRef } from 'react';
 import { useAppContext, formatDate } from '../context/AppContext';
-import { ClipboardList, Plus, X, Trash2, AlertCircle, Mic, Square, Send, CheckCircle2 } from 'lucide-react';
+import { ClipboardList, Plus, X, Trash2, AlertCircle, Mic, Square, Send, CheckCircle2, ListChecks } from 'lucide-react';
 
 export default function GigList() {
   const { entries, gigs, authUser, addGig, deleteGig, shareGig } = useAppContext();
   const [showForm, setShowForm] = useState(false);
+  
+  // Multi-select state
+  const [selectedGigs, setSelectedGigs] = useState(new Set());
 
   // Form State
   const today = new Date().toISOString().split('T')[0];
@@ -32,15 +35,14 @@ export default function GigList() {
         const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
         setAudioBlob(blob);
         setAudioUrl(URL.createObjectURL(blob));
-        // Stop all tracks to release mic
         stream.getTracks().forEach(track => track.stop());
       };
 
       mediaRecorderRef.current.start();
       setIsRecording(true);
     } catch (err) {
-      console.error("Microphone error:", err);
-      alert("Could not access microphone. Please check permissions.");
+      console.error("Error accessing microphone:", err);
+      alert("Could not access microphone. Please ensure permissions are granted.");
     }
   };
 
@@ -94,16 +96,12 @@ export default function GigList() {
     deleteRecording();
   };
 
-  // Combine legacy hand holes with new gig entries
   const myGigList = useMemo(() => {
     const legacy = entries
       .filter(e => e.inspector === authUser?.name && e.taskType === 'Hand Hole' && e.handHoleStatus === 'Not Complete')
       .map(e => ({
         id: e.id,
         date: e.date,
-        rdtSection: e.rdtSection,
-        route: e.route,
-        location: e.location,
         description: e.incompletionReason,
         isLegacy: true
       }));
@@ -115,17 +113,50 @@ export default function GigList() {
     return [...legacy, ...newGigs].sort((a, b) => new Date(b.date) - new Date(a.date));
   }, [entries, gigs, authUser]);
 
+  const toggleSelection = (id) => {
+    const next = new Set(selectedGigs);
+    if (next.has(id)) {
+      next.delete(id);
+    } else {
+      next.add(id);
+    }
+    setSelectedGigs(next);
+  };
+  
+  const handleBatchSend = () => {
+    if (window.confirm(`Send ${selectedGigs.size} gigs to the resident?`)) {
+      selectedGigs.forEach(id => shareGig(id));
+      setSelectedGigs(new Set());
+    }
+  };
+
   return (
     <div className="max-w-5xl mx-auto mt-6">
       
       {/* Action Bar */}
-      <div className="mb-6 flex justify-end">
+      <div className="mb-6 flex justify-between items-center">
+        <div>
+           {selectedGigs.size > 0 && (
+             <div className="flex space-x-3 items-center animate-in fade-in zoom-in duration-200">
+               <button 
+                 onClick={handleBatchSend}
+                 className="flex items-center px-4 py-2 bg-indigo-600 text-white font-bold rounded-lg shadow-md hover:bg-indigo-700 hover:shadow-lg transition-all"
+               >
+                 <Send className="h-4 w-4 mr-2" /> Send {selectedGigs.size} Selected
+               </button>
+               <button 
+                 onClick={() => setSelectedGigs(new Set())}
+                 className="text-slate-500 font-medium text-sm hover:text-slate-700 transition-colors"
+               >
+                 Cancel
+               </button>
+             </div>
+           )}
+        </div>
         <button
           onClick={() => setShowForm(!showForm)}
           className={`flex items-center px-5 py-2.5 rounded-lg font-bold shadow-md transition-all ${
-            showForm 
-              ? 'bg-slate-200 text-slate-700 hover:bg-slate-300' 
-              : 'bg-red-600 text-white hover:bg-red-700 hover:shadow-lg'
+            showForm ? 'bg-slate-200 text-slate-700 hover:bg-slate-300' : 'bg-red-600 text-white hover:bg-red-700 hover:shadow-lg'
           }`}
         >
           {showForm ? (
@@ -175,7 +206,7 @@ export default function GigList() {
                     {!audioBlob ? (
                       <>
                         {!isRecording ? (
-                          <button type="button" onClick={startRecording} className="flex items-center px-4 py-2 bg-rose-100 text-rose-700 hover:bg-rose-200 rounded-lg font-semibold transition-colors w-full sm:w-auto justify-center">
+                          <button type="button" onClick={startRecording} className="flex items-center px-4 py-2 bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 rounded-lg font-semibold transition-colors w-full sm:w-auto justify-center">
                             <Mic className="h-5 w-5 mr-2" /> Start Recording
                           </button>
                         ) : (
@@ -208,35 +239,61 @@ export default function GigList() {
       )}
 
       <div className="bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden">
-        <div className="px-8 py-6 border-b border-slate-200 bg-white flex items-center">
-          <div className="bg-red-100 p-3 rounded-full mr-4">
-             <ClipboardList className="h-6 w-6 text-red-600" />
+        <div className="px-8 py-6 border-b border-slate-200 bg-white flex items-center justify-between">
+          <div className="flex items-center">
+            <div className="bg-red-100 p-3 rounded-full mr-4">
+               <ClipboardList className="h-6 w-6 text-red-600" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-slate-900 tracking-tight">My Gig List</h2>
+              <p className="mt-1 text-sm text-slate-500">Deficiencies logged by <span className="font-semibold text-indigo-600">{authUser?.name}</span>.</p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-xl font-bold text-slate-900 tracking-tight">My Gig List</h2>
-            <p className="mt-1 text-sm text-slate-500">Deficiencies logged by <span className="font-semibold text-indigo-600">{authUser?.name}</span>.</p>
+          <div className="hidden sm:flex text-sm text-slate-400 items-center">
+             <ListChecks className="h-4 w-4 mr-2" /> Click rows to batch send
           </div>
         </div>
 
         <div className="overflow-x-auto">
           {myGigList.length > 0 ? (
-            <table className="min-w-full divide-y divide-slate-200">
+            <table className="min-w-full divide-y divide-slate-200 select-none">
               <thead className="bg-slate-50">
                 <tr>
-                  <th scope="col" className="px-8 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Date</th>
+                  <th scope="col" className="px-8 py-4 w-12 text-center text-xs font-bold text-slate-500 uppercase tracking-wider"></th>
+                  <th scope="col" className="px-4 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Date</th>
                   <th scope="col" className="px-8 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Description of Deficiency</th>
                   <th scope="col" className="px-8 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Audio</th>
                   <th scope="col" className="px-8 py-4 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">Action</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-slate-100">
-                {myGigList.map((row, idx) => (
-                  <tr key={idx} className={`hover:bg-slate-50 transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}`}>
-                    <td className="px-8 py-4 whitespace-nowrap text-sm font-medium text-slate-900">{formatDate(row.date)}</td>
+                {myGigList.map((row, idx) => {
+                  const isSelected = selectedGigs.has(row.id);
+                  const isSent = row.sharedWithResident;
+                  const canSelect = !row.isLegacy && !isSent;
+                  
+                  return (
+                  <tr 
+                    key={idx} 
+                    onClick={() => { if(canSelect) toggleSelection(row.id); }}
+                    className={`transition-colors duration-200 ${
+                      isSelected ? 'bg-indigo-50/80 cursor-pointer' : isSent ? 'bg-emerald-50/30' : canSelect ? (idx % 2 === 0 ? 'bg-white hover:bg-slate-50 cursor-pointer' : 'bg-slate-50/50 hover:bg-slate-100 cursor-pointer') : (idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50')
+                    }`}
+                  >
+                    <td className="px-8 py-4 whitespace-nowrap text-center">
+                       {canSelect ? (
+                         <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${isSelected ? 'bg-indigo-600 border-indigo-600' : 'border-slate-300 bg-white'}`}>
+                            {isSelected && <CheckCircle2 className="h-4 w-4 text-white" />}
+                         </div>
+                       ) : isSent ? (
+                         <CheckCircle2 className="h-5 w-5 text-emerald-500 opacity-50" title="Already Sent" />
+                       ) : null}
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-slate-900">{formatDate(row.date)}</td>
                     <td className="px-8 py-4 text-sm text-slate-700 font-medium">
                       {row.description ? row.description : <span className="text-slate-400 italic">No text provided</span>}
                     </td>
-                    <td className="px-8 py-4 whitespace-nowrap">
+                    <td className="px-8 py-4 whitespace-nowrap" onClick={e => e.stopPropagation()}>
                       {row.audioData ? (
                         <audio src={row.audioData} controls className="h-8 w-48" />
                       ) : (
@@ -245,12 +302,13 @@ export default function GigList() {
                         </span>
                       )}
                     </td>
-                    <td className="px-8 py-4 whitespace-nowrap text-center">
+                    <td className="px-8 py-4 whitespace-nowrap text-center" onClick={e => e.stopPropagation()}>
                       {!row.isLegacy && (
                         <div className="flex items-center justify-center space-x-2">
-                          {!row.sharedWithResident ? (
+                          {!isSent ? (
                             <button
-                              onClick={() => {
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 if (window.confirm('Send this gig to the resident? They will be able to see it.')) {
                                   shareGig(row.id);
                                 }
@@ -266,9 +324,11 @@ export default function GigList() {
                             </div>
                           )}
                           <button
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation();
                               if (window.confirm('Are you sure you want to delete this gig?')) {
                                 deleteGig(row.id);
+                                if(isSelected) toggleSelection(row.id);
                               }
                             }}
                             className="text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded-lg transition-colors"
@@ -281,7 +341,7 @@ export default function GigList() {
                       {row.isLegacy && <span className="text-xs text-slate-400 italic">Legacy Log</span>}
                     </td>
                   </tr>
-                ))}
+                )})}
               </tbody>
             </table>
           ) : (
