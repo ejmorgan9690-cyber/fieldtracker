@@ -671,7 +671,7 @@ export default function MapRoute() {
               {/* Red Pen Annotations (Redline View Only) */}
               {mapMode === 'redline' && completedSegments.filter(s => s.type === 'duct' || s.type === 'fiber').map(seg => {
                 if (!seg.inspector || !seg.date || !seg.midCoord || !seg.bracketLine) return null;
-                const d = new Date(seg.date);
+                const d = seg.date.includes('T') ? new Date(seg.date) : new Date(seg.date + 'T12:00:00');
                 const dateStr = `${d.getMonth()+1}-${d.getDate()}-${String(d.getFullYear()).slice(-2)}`;
                 
                 const unitStr = seg.unitCode ? `<br/>${seg.unitCode}` : '';
@@ -742,7 +742,8 @@ export default function MapRoute() {
                   console.warn("Midpoint calc failed for side swap", e);
                 }
 
-                const d = new Date(redline.service_date || redline.created_at || Date.now());
+                const rawDate = redline.service_date || redline.date || redline.created_at || new Date().toISOString();
+                const d = rawDate.includes('T') ? new Date(rawDate) : new Date(rawDate + 'T12:00:00');
                 const dateStr = `${d.getMonth()+1}-${d.getDate()}-${String(d.getFullYear()).slice(-2)}`;
                 const notesStr = redline.notes ? `<br/><span style="font-size: 0.75rem; color: #4b5563; white-space: normal; display: block; max-width: 100px; margin-top: 2px; line-height: 1;">${redline.notes}</span>` : '';
 
