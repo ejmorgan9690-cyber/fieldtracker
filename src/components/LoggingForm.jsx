@@ -207,38 +207,44 @@ export default function LoggingForm() {
       return;
     }
     
-    if (!recognitionRef.current) {
-      recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.continuous = true;
-      recognitionRef.current.interimResults = true;
-      recognitionRef.current.lang = 'en-US';
-
-      recognitionRef.current.onstart = () => setIsListening(true);
-      
-      recognitionRef.current.onresult = (event) => {
-        let fullTranscript = '';
-        for (let i = 0; i < event.results.length; i++) {
-          fullTranscript += event.results[i][0].transcript + ' ';
-        }
-        setVoiceTranscript(fullTranscript);
-        parseVoiceTranscript(fullTranscript);
-      };
-      
-      recognitionRef.current.onerror = (event) => {
-        console.error("Speech error:", event.error);
-        setIsListening(false);
-        if (event.error !== 'aborted') {
-          alert("Microphone error: " + event.error);
-        }
-      };
-      
-      recognitionRef.current.onend = () => setIsListening(false);
+    // Always abort any stuck instance
+    if (recognitionRef.current) {
+      try { recognitionRef.current.abort(); } catch (e) {}
     }
 
+    // Always create a FRESH instance for each session
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+
+    recognition.onstart = () => setIsListening(true);
+    
+    recognition.onresult = (event) => {
+      let fullTranscript = '';
+      for (let i = 0; i < event.results.length; i++) {
+        fullTranscript += event.results[i][0].transcript + ' ';
+      }
+      setVoiceTranscript(fullTranscript);
+      parseVoiceTranscript(fullTranscript);
+    };
+    
+    recognition.onerror = (event) => {
+      console.error("Speech error:", event.error);
+      setIsListening(false);
+      if (event.error !== 'aborted') {
+        alert("Microphone error: " + event.error);
+      }
+    };
+    
+    recognition.onend = () => setIsListening(false);
+
+    recognitionRef.current = recognition;
+
     try {
-      recognitionRef.current.start();
+      recognition.start();
     } catch (e) {
-      console.warn("Recognition already started");
+      console.error("Failed to start mic:", e);
     }
   };
 
