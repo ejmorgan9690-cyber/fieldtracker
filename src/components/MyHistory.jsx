@@ -134,8 +134,8 @@ export default function MyHistory() {
                           )}
                         </td>
                         <td className={`${compactView ? 'px-1 py-2 text-[10px] whitespace-normal' : 'px-8 py-4 text-sm whitespace-nowrap'} text-right font-bold text-slate-900`}>
-                          {row.footage.toLocaleString()} <span className="text-slate-500 font-medium">{row.taskType === 'Hand Hole' || row.taskType === 'Drop' || row.taskType === 'Fiber Loop' ? 'qty' : 'ft'}</span>
-                      </td>
+                          {row.footage != null ? row.footage.toLocaleString() : '0'} <span className="text-slate-500 font-medium">{row.taskType === 'Hand Hole' || row.taskType === 'Drop' || row.taskType === 'Fiber Loop' ? 'qty' : 'ft'}</span>
+                        </td>
                       <td className={`${compactView ? 'px-1 py-2' : 'px-8 py-4 whitespace-nowrap'} text-center`}>
                         <button
                           onClick={() => {

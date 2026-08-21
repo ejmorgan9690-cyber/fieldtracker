@@ -124,7 +124,7 @@ export default function MasterDrops() {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-bold text-slate-900">
-                      {row.totalFootage.toLocaleString()} <span className="text-slate-500 font-medium">qty</span>
+                      {row.totalFootage != null ? row.totalFootage.toLocaleString() : '0'} <span className="text-slate-500 font-medium">qty</span>
                     </td>
                   </tr>
                 ))}

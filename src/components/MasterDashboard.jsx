@@ -212,7 +212,7 @@ export default function MasterDashboard() {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-bold text-slate-900">
-                      {row.totalFootage.toLocaleString()} <span className="text-slate-500 font-medium">{row.taskType === 'Hand Hole' || row.taskType === 'Drop' ? 'qty' : 'ft'}</span>
+                      {row.totalFootage != null ? row.totalFootage.toLocaleString() : '0'} <span className="text-slate-500 font-medium">{row.taskType === 'Hand Hole' || row.taskType === 'Drop' ? 'qty' : 'ft'}</span>
                     </td>
                   </tr>
                 ))}
