@@ -353,18 +353,18 @@ export default function LoggingForm() {
       gpsCoordinates: ''
     };
 
-    const rdtMatch = lower.match(/rdt\s*(\d+)/);
+    const rdtMatch = [...lower.matchAll(/rdt\s*(\d+)/g)].pop();
     if (rdtMatch) parsed.rdtSection = `RDT${rdtMatch[1]}`;
-    if (lower.includes('toll north')) parsed.rdtSection = 'Toll N';
-    if (lower.includes('toll south')) parsed.rdtSection = 'Toll S';
+    if (lower.lastIndexOf('toll north') > lower.lastIndexOf('toll south')) parsed.rdtSection = 'Toll N';
+    else if (lower.lastIndexOf('toll south') !== -1) parsed.rdtSection = 'Toll S';
 
-    const routeMatch = lower.match(/route\s*(\d+)/);
+    const routeMatch = [...lower.matchAll(/route\s*(\d+)/g)].pop();
     if (routeMatch) {
       parsed.route = String(routeMatch[1]);
       lower = lower.replace(routeMatch[0], ''); // Scrub to prevent number cross-talk
     }
 
-    const locMatch = lower.match(/location\s*(\d+)/);
+    const locMatch = [...lower.matchAll(/location\s*(\d+)/g)].pop();
     if (locMatch) {
       parsed.location = String(locMatch[1]);
       lower = lower.replace(locMatch[0], ''); // Scrub to prevent number cross-talk
@@ -388,10 +388,10 @@ export default function LoggingForm() {
     }
 
     // Look for numbers trailing words like "bore", "drop", etc. (Handles "bore number 1" or "bore 1")
-    const numMatch = lower.match(/(?:number|bore|drop|hole)\s*(?:number\s*)?(\d+)/);
+    const numMatch = [...lower.matchAll(/(?:number|bore|drop|hole)\s*(?:number\s*)?(\d+)/g)].pop();
     if (numMatch) parsed.specNumber = String(numMatch[1]);
 
-    const ftMatch = lower.match(/(\d+)\s*(?:feet|foot|ft|')/);
+    const ftMatch = [...lower.matchAll(/(\d+)\s*(?:feet|foot|ft|')/g)].pop();
     if (ftMatch) {
       parsed.footage = String(ftMatch[1]);
     } else {
@@ -407,33 +407,36 @@ export default function LoggingForm() {
 
     // Unit Code Parsing
     if (parsed.taskType === 'Bore') {
-      if (lower.includes('dirt')) parsed.unitCode = 'BM61D';
-      if (lower.includes('rock')) parsed.unitCode = 'BM61R';
+      if (lower.lastIndexOf('dirt') > lower.lastIndexOf('rock')) parsed.unitCode = 'BM61D';
+      else if (lower.lastIndexOf('rock') !== -1) parsed.unitCode = 'BM61R';
     } else if (parsed.taskType === 'Plow Duct') {
-      const plowMatch = lower.match(/\b([1234])\b\s*(?:duct|pipe|conduit)\b/) || lower.match(/\b(?:duct|pipe|conduit|plow)\s*\b([1234])\b/);
-      if (plowMatch && plowMatch[1]) {
-         parsed.unitCode = `BFOV (1.25)(${plowMatch[1]})`;
+      const r1 = [...lower.matchAll(/\b([1234])\b\s*(?:duct|pipe|conduit)\b/g)];
+      const r2 = [...lower.matchAll(/\b(?:duct|pipe|conduit|plow)\s*\b([1234])\b/g)];
+      const allPlowMatches = [...r1, ...r2].sort((a, b) => a.index - b.index);
+      const plowMatch = allPlowMatches.pop();
+      if (plowMatch) {
+         parsed.unitCode = `BFOV (1.25)(${plowMatch[1] || plowMatch[2]})`;
       }
       if (lower.includes('rock')) parsed.isPlowRock = true;
     } else if (parsed.taskType === 'Fiber') {
-      const bfoMatch = lower.match(/(?:bfo|unit)\s*(24|48|72|96)/);
+      const bfoMatch = [...lower.matchAll(/(?:bfo|unit)\s*(24|48|72|96)/g)].pop();
       if (bfoMatch) parsed.unitCode = `BFO ${bfoMatch[1]}I`;
     } else if (parsed.taskType === 'Hand Hole') {
-      if (lower.includes('small') || lower.includes('30') || lower.includes('24x36')) parsed.unitCode = 'BHF (24x36x30)';
-      if (lower.includes('large') || lower.includes('48') || lower.includes('30x48')) parsed.unitCode = 'BHF (30x48x36)';
+      if (lower.lastIndexOf('small') > lower.lastIndexOf('large') || lower.lastIndexOf('30') > lower.lastIndexOf('48') || lower.includes('24x36')) parsed.unitCode = 'BHF (24x36x30)';
+      else if (lower.lastIndexOf('large') !== -1 || lower.lastIndexOf('48') !== -1 || lower.includes('30x48')) parsed.unitCode = 'BHF (30x48x36)';
     }
 
     // Extract valid fiber counts anywhere in the sentence (e.g. "48 fiber", "fiber 48")
     const allNumsForFiber = lower.match(/\b\d+\b/g) || [];
     const validCounts = ['4', '12', '24', '48', '96', '144', '288'];
-    const foundCount = allNumsForFiber.find(n => validCounts.includes(n) && n !== parsed.route && n !== parsed.location);
+    const foundCount = allNumsForFiber.reverse().find(n => validCounts.includes(n) && n !== parsed.route && n !== parsed.location);
     if (foundCount) {
         parsed.fiberCount = `${foundCount} count`;
     }
 
     if (lower.includes('loop')) {
        parsed.isFiberLoop = true;
-       const loopMatch = lower.match(/(\d+)\s*loop/);
+       const loopMatch = [...lower.matchAll(/(\d+)\s*loop/g)].pop();
        if (loopMatch) parsed.loopQuantity = String(loopMatch[1]);
        else parsed.loopQuantity = '1';
     }
@@ -445,7 +448,7 @@ export default function LoggingForm() {
     if (lower.includes('ground rod') || lower.includes('rod')) parsed.hasGroundRod = true;
     if (lower.includes('warning sign') || lower.includes('sign')) parsed.hasSign = true;
 
-    const psMatch = lower.match(/(?:ps|p s)\s*(\d+)/);
+    const psMatch = [...lower.matchAll(/(?:ps|p s)\s*(\d+)/g)].pop();
     if (psMatch) parsed.psNumber = String(psMatch[1]);
 
     setVoiceData(parsed);
