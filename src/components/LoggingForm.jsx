@@ -297,7 +297,7 @@ export default function LoggingForm() {
   const parseVoiceTranscript = (text) => {
     let lower = text.toLowerCase().replace(/[.,!]/g, '');
     
-    const numMap = { 'one': '1', 'two': '2', 'three': '3', 'four': '4', 'five': '5', 'six': '6', 'seven': '7', 'eight': '8', 'nine': '9', 'ten': '10' };
+    const numMap = { 'one': '1', 'two': '2', 'three': '3', 'four': '4', 'five': '5', 'six': '6', 'seven': '7', 'eight': '8', 'nine': '9', 'ten': '10', 'eleven': '11', 'twelve': '12', 'thirteen': '13', 'fourteen': '14', 'fifteen': '15', 'twenty': '20', 'thirty': '30', 'forty': '40', 'fifty': '50', 'sixty': '60', 'seventy': '70', 'eighty': '80', 'ninety': '90', 'hundred': '100' };
     Object.keys(numMap).forEach(k => {
       const regex = new RegExp(`\\b${k}\\b`, 'g');
       lower = lower.replace(regex, numMap[k]);
@@ -325,20 +325,30 @@ export default function LoggingForm() {
     const locMatch = lower.match(/location\s*(\d+)/);
     if (locMatch) parsed.location = String(locMatch[1]);
 
-    if (lower.includes('bore')) parsed.taskType = 'Bore';
+    if (lower.includes('bore') || lower.includes('board') || lower.includes('boar') || lower.includes('four')) parsed.taskType = 'Bore';
     else if (lower.includes('trench')) parsed.taskType = 'Trench';
     else if (lower.includes('plow')) parsed.taskType = 'Plow Duct';
     else if (lower.includes('fiber')) parsed.taskType = 'Fiber';
     else if (lower.includes('hand hole') || lower.includes('handhole')) parsed.taskType = 'Hand Hole';
     else if (lower.includes('drop')) parsed.taskType = 'Drop';
 
-    const numMatch = lower.match(/number\s*(\d+)/);
+    // Look for numbers trailing words like "bore", "board", "drop", etc.
+    const numMatch = lower.match(/(?:number|bore|board|boar|four|drop|hole)\s*(\d+)/);
     if (numMatch) parsed.specNumber = String(numMatch[1]);
 
-    const ftMatch = lower.match(/(\d+)\s*feet/);
-    const ftMatch2 = lower.match(/(\d+)\s*foot/);
-    if (ftMatch) parsed.footage = String(ftMatch[1]);
-    else if (ftMatch2) parsed.footage = String(ftMatch2[1]);
+    const ftMatch = lower.match(/(\d+)\s*(?:feet|foot|ft|')/);
+    if (ftMatch) {
+      parsed.footage = String(ftMatch[1]);
+    } else {
+      // Smart Fallback: If no "feet" keyword was spoken, look for any standalone numbers.
+      // Assume the very last unused number in the sentence is the footage (e.g. "Bore 1 150")
+      const allNums = lower.match(/\b\d+\b/g) || [];
+      const usedNums = [parsed.route, parsed.location, parsed.specNumber];
+      const unused = allNums.filter(n => !usedNums.includes(n));
+      if (unused.length > 0) {
+        parsed.footage = unused[unused.length - 1];
+      }
+    }
 
     setVoiceData(parsed);
   };
