@@ -37,6 +37,7 @@ const MainContent = () => {
         {(authUser.role === 'Inspector' || authUser.role === 'Supervisor') && activeTab === 'log' && <LoggingForm />}
         {(authUser.role === 'Inspector' || authUser.role === 'Supervisor') && activeTab === 'dailies' && <DailiesForm />}
         {(authUser.role === 'Inspector' || authUser.role === 'Supervisor') && activeTab === 'notes' && <NotesForm />}
+        {(authUser.role === 'Inspector' || authUser.role === 'Supervisor') && activeTab === 'master_notes' && <MasterNotes />}
         {(authUser.role === 'Inspector' || authUser.role === 'Supervisor') && activeTab === 'history' && <MyHistory />}
         {(authUser.role === 'Inspector' || authUser.role === 'Supervisor') && activeTab === 'gig_list' && <GigList />}
         {(authUser.role === 'Inspector' || authUser.role === 'Supervisor') && activeTab === 'redlines' && <RedlinesForm />}
@@ -45,7 +46,6 @@ const MainContent = () => {
         {authUser.role === 'Supervisor' && activeTab === 'pending_review' && <PendingReview />}
         {authUser.role === 'Supervisor' && activeTab === 'accepted_logs' && <AcceptedLogFeed />}
         {authUser.role === 'Supervisor' && activeTab === 'master_dailies' && <MasterDailies />}
-        {authUser.role === 'Supervisor' && activeTab === 'master_notes' && <MasterNotes />}
         {authUser.role === 'Supervisor' && activeTab === 'master_redlines' && <MasterRedlines />}
         {authUser.role === 'Supervisor' && activeTab === 'master_gig_list' && <MasterGigList />}
         {authUser.role === 'Supervisor' && activeTab === 'master_drops' && <MasterDrops />}
@@ -55,7 +55,6 @@ const MainContent = () => {
         {authUser.role === 'Resident' && activeTab === 'dashboard' && <MasterUnitSheet />}
         {authUser.role === 'Resident' && activeTab === 'accepted_logs' && <AcceptedLogFeed />}
         {authUser.role === 'Resident' && activeTab === 'master_dailies' && <MasterDailies />}
-        {authUser.role === 'Resident' && activeTab === 'master_notes' && <MasterNotes />}
         {authUser.role === 'Resident' && activeTab === 'master_redlines' && <MasterRedlines />}
         {authUser.role === 'Resident' && activeTab === 'master_gig_list' && <MasterGigList />}
         {authUser.role === 'Resident' && activeTab === 'master_drops' && <MasterDrops />}

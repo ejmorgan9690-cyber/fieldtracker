@@ -5,8 +5,10 @@ import { Mic, MapPin, Trash2, Calendar, User, FileText } from 'lucide-react';
 export default function MasterNotes() {
   const { notes, authUser, deleteNote } = useAppContext();
 
-  // Sort notes by newest first
-  const sortedNotes = [...(notes || [])].sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+  // Sort and filter notes by newest first, strictly locked to the current inspector
+  const sortedNotes = [...(notes || [])]
+    .filter(n => authUser?.role === 'Supervisor' || n.inspector_name === authUser?.name)
+    .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
 
   return (
     <div className="max-w-7xl mx-auto">
