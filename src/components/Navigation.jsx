@@ -68,28 +68,7 @@ export default function Navigation() {
                   <FileText className="w-4 h-4 mr-2" />
                   Dailies
                 </button>
-                <button
-                  onClick={() => setActiveTab('notes')}
-                  className={`flex-1 sm:flex-none flex items-center px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 ${
-                    activeTab === 'notes'
-                      ? 'bg-indigo-600 text-white shadow-md ring-2 ring-indigo-600 ring-offset-2'
-                      : 'text-slate-600 bg-slate-100 hover:bg-slate-200 hover:text-slate-900'
-                  }`}
-                >
-                  <Mic className="w-4 h-4 mr-2" />
-                  Notes
-                </button>
-                <button
-                  onClick={() => setActiveTab('master_notes')}
-                  className={`flex-1 sm:flex-none flex items-center px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 ${
-                    activeTab === 'master_notes'
-                      ? 'bg-indigo-600 text-white shadow-md ring-2 ring-indigo-600 ring-offset-2'
-                      : 'text-slate-600 bg-slate-100 hover:bg-slate-200 hover:text-slate-900'
-                  }`}
-                >
-                  <FileText className="w-4 h-4 mr-2" />
-                  Notes Feed
-                </button>
+
                 <button
                   onClick={() => setActiveTab('history')}
                   className={`flex-1 sm:flex-none flex items-center px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 ${
@@ -122,6 +101,28 @@ export default function Navigation() {
                 >
                   <Map className="w-4 h-4 mr-2" />
                   Redlines
+                </button>
+                <button
+                  onClick={() => setActiveTab('notes')}
+                  className={`flex-1 sm:flex-none flex items-center px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 ${
+                    activeTab === 'notes'
+                      ? 'bg-indigo-600 text-white shadow-md ring-2 ring-indigo-600 ring-offset-2'
+                      : 'text-slate-600 bg-slate-100 hover:bg-slate-200 hover:text-slate-900'
+                  }`}
+                >
+                  <Mic className="w-4 h-4 mr-2" />
+                  Notes
+                </button>
+                <button
+                  onClick={() => setActiveTab('master_notes')}
+                  className={`flex-1 sm:flex-none flex items-center px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 ${
+                    activeTab === 'master_notes'
+                      ? 'bg-indigo-600 text-white shadow-md ring-2 ring-indigo-600 ring-offset-2'
+                      : 'text-slate-600 bg-slate-100 hover:bg-slate-200 hover:text-slate-900'
+                  }`}
+                >
+                  <FileText className="w-4 h-4 mr-2" />
+                  Notes Feed
                 </button>
               </>
             )}
