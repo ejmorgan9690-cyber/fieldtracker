@@ -145,6 +145,7 @@ export default function LoggingForm() {
   // Unit Code State
   const [unitCode, setUnitCode] = useState('');
   const [isFiberLoop, setIsFiberLoop] = useState(false);
+  const [isPlowRock, setIsPlowRock] = useState(false);
   const [loopQuantity, setLoopQuantity] = useState('');
   const [hasGroundRod, setHasGroundRod] = useState(false);
   const [hasSign, setHasSign] = useState(false);
@@ -230,6 +231,7 @@ export default function LoggingForm() {
       psNumber: '',
       isAddedBore: false,
       isFiberLoop: false,
+      isPlowRock: false,
       loopQuantity: '',
       hasGroundRod: false,
       hasSign: false,
@@ -390,6 +392,7 @@ export default function LoggingForm() {
          const num = plowMatch[1].replace('one','1').replace('two','2').replace('three','3').replace('four','4');
          if (['1','2','3','4'].includes(num)) parsed.unitCode = `BFOV (1.25)(${num})`;
       }
+      if (lower.includes('rock')) parsed.isPlowRock = true;
     } else if (parsed.taskType === 'Fiber') {
       const bfoMatch = lower.match(/(?:bfo|unit)\s*(24|48|72|96)/);
       if (bfoMatch) parsed.unitCode = `BFO ${bfoMatch[1]}I`;
@@ -446,6 +449,7 @@ export default function LoggingForm() {
       dropNumber: voiceData.taskType === 'Drop' ? voiceData.specNumber : null,
       isAddedBore: voiceData.isAddedBore,
       isFiberLoop: voiceData.isFiberLoop,
+      isPlowRock: voiceData.isPlowRock,
       loopQuantity: voiceData.loopQuantity,
       hasGroundRod: voiceData.hasGroundRod,
       hasSign: voiceData.hasSign,
@@ -481,6 +485,7 @@ export default function LoggingForm() {
   useEffect(() => {
     setUnitCode('');
     setIsFiberLoop(false);
+    setIsPlowRock(false);
     setHasGroundRod(false);
     setHasSign(false);
   }, [taskType]);
@@ -525,6 +530,7 @@ export default function LoggingForm() {
       hasGroundRod,
       hasSign,
       isFiberLoop,
+      isPlowRock,
       loopQuantity
     });
 
@@ -536,7 +542,8 @@ export default function LoggingForm() {
         rdtSection: taskType === 'Drop' ? '-' : rdtSection,
         route: taskType === 'Drop' || rdtSection === 'Toll N' || rdtSection === 'Toll S' ? '-' : route,
         location: taskType === 'Drop' ? '-' : location,
-        imageData
+        imageData,
+        notes: `${unitCode ? `UNIT: ${unitCode}` : ''} ${isPlowRock ? '+ BM71' : ''} ${isFiberLoop ? `+ LOOP (${loopQuantity})` : ''}`.trim()
       });
     }
 
@@ -640,7 +647,22 @@ export default function LoggingForm() {
                 )}
               </div>
 
-              <div>
+              {voiceData.taskType === 'Plow Duct' && (
+                <div className="flex items-center mt-3">
+                  <input
+                    id="modalIsPlowRock"
+                    type="checkbox"
+                    checked={voiceData.isPlowRock}
+                    onChange={(e) => setVoiceData({...voiceData, isPlowRock: e.target.checked})}
+                    className="h-5 w-5 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"
+                  />
+                  <label htmlFor="modalIsPlowRock" className="ml-2 text-xs font-bold text-slate-700">
+                    Include Plow Rock (BM71)
+                  </label>
+                </div>
+              )}
+
+              <div className="mt-4">
                 <label className="block text-xs font-bold text-slate-600 uppercase mb-1 flex items-center justify-between">
                   <span>GPS Coordinates</span>
                   <button 
@@ -914,6 +936,18 @@ export default function LoggingForm() {
                     options={['BFOV (1.25)(1)', 'BFOV (1.25)(2)', 'BFOV (1.25)(3)', 'BFOV (1.25)(4)']} 
                     required 
                   />
+                  <div className="flex items-center pt-2">
+                    <input
+                      id="manualIsPlowRock"
+                      type="checkbox"
+                      checked={isPlowRock}
+                      onChange={(e) => setIsPlowRock(e.target.checked)}
+                      className="h-5 w-5 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"
+                    />
+                    <label htmlFor="manualIsPlowRock" className="ml-2 text-sm font-bold text-slate-700">
+                      Include Plow Rock (BM71) (Generates a separate pay unit row)
+                    </label>
+                  </div>
                 </div>
               ) : taskType === 'Fiber' ? (
                 <div className="animate-in fade-in slide-in-from-top-2 space-y-4">

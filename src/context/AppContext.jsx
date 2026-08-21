@@ -233,6 +233,15 @@ export const AppProvider = ({ children }) => {
         });
       }
 
+      // If they checked the Plow Rock box, generate a second distinct payload for BM71!
+      if (entry.taskType === 'Plow Duct' && entry.isPlowRock) {
+        payloads.push({
+          ...supabasePayload,
+          unit_code: 'BM71',
+          task_type: 'Plow Rock'
+        });
+      }
+
       const { data, error } = await supabase
         .from('production_logs')
         .insert(payloads)
