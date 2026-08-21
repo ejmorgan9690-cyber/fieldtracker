@@ -225,7 +225,15 @@ export default function LoggingForm() {
       taskType: 'Bore',
       specNumber: '1',
       footage: '',
-      gpsCoordinates: ''
+      gpsCoordinates: '',
+      unitCode: '',
+      psNumber: '',
+      isAddedBore: false,
+      isFiberLoop: false,
+      loopQuantity: '',
+      hasGroundRod: false,
+      hasSign: false,
+      fiberCount: FIBER_COUNTS[0]
     });
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -358,6 +366,34 @@ export default function LoggingForm() {
       }
     }
 
+    if (lower.includes('dirt')) parsed.unitCode = 'BM601D';
+    if (lower.includes('rock')) parsed.unitCode = 'BM601R';
+
+    const fiberCountMatch = lower.match(/(\d+)\s*(?:count|fiber|strand|strength)/);
+    if (fiberCountMatch) {
+       const count = fiberCountMatch[1];
+       if (['4', '12', '24', '48', '96', '144', '288'].includes(count)) {
+           parsed.fiberCount = `${count} count`;
+       }
+    }
+
+    if (lower.includes('loop')) {
+       parsed.isFiberLoop = true;
+       const loopMatch = lower.match(/(\d+)\s*loop/);
+       if (loopMatch) parsed.loopQuantity = String(loopMatch[1]);
+       else parsed.loopQuantity = '1';
+    }
+
+    if (lower.includes('added bore') || lower.includes('added boar') || lower.includes('added board') || lower.includes('added')) {
+       parsed.isAddedBore = true;
+    }
+
+    if (lower.includes('ground rod') || lower.includes('rod')) parsed.hasGroundRod = true;
+    if (lower.includes('warning sign') || lower.includes('sign')) parsed.hasSign = true;
+
+    const psMatch = lower.match(/(?:ps|p s)\s*(\d+)/);
+    if (psMatch) parsed.psNumber = String(psMatch[1]);
+
     setVoiceData(parsed);
   };
   
@@ -376,16 +412,16 @@ export default function LoggingForm() {
       taskType: voiceData.taskType,
       footage: voiceData.footage,
       boreNumber: voiceData.taskType === 'Bore' ? voiceData.specNumber : null,
-      fiberCount: voiceData.taskType === 'Fiber' ? FIBER_COUNTS[0] : null,
+      fiberCount: voiceData.taskType === 'Fiber' ? voiceData.fiberCount : null,
       handHoleNumber: voiceData.taskType === 'Hand Hole' ? voiceData.specNumber : null,
       dropNumber: voiceData.taskType === 'Drop' ? voiceData.specNumber : null,
-      isAddedBore: false,
-      isFiberLoop: false,
-      loopQuantity: '',
-      hasGroundRod: false,
-      hasSign: false,
-      unitCode: '',
-      psNumber: '',
+      isAddedBore: voiceData.isAddedBore,
+      isFiberLoop: voiceData.isFiberLoop,
+      loopQuantity: voiceData.loopQuantity,
+      hasGroundRod: voiceData.hasGroundRod,
+      hasSign: voiceData.hasSign,
+      unitCode: voiceData.unitCode,
+      psNumber: voiceData.psNumber,
       gpsCoordinates: voiceData.gpsCoordinates,
       inspector: authUser.name
     });
