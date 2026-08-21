@@ -95,7 +95,6 @@ export default function MasterGigList() {
                   <tr>
                     <th scope="col" className="px-8 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Date</th>
                     <th scope="col" className="px-8 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Inspector</th>
-                    <th scope="col" className="px-8 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Hierarchy</th>
                     <th scope="col" className="px-8 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Description of Deficiency</th>
                     <th scope="col" className="px-8 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Audio Data</th>
                   </tr>
@@ -105,9 +104,6 @@ export default function MasterGigList() {
                     <tr key={idx} className={`hover:bg-slate-50 transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}`}>
                       <td className="px-8 py-4 whitespace-nowrap text-sm font-medium text-slate-900">{formatDate(row.date)}</td>
                       <td className="px-8 py-4 whitespace-nowrap text-sm font-bold text-indigo-600">{row.inspector}</td>
-                      <td className="px-8 py-4 whitespace-nowrap text-sm text-slate-700">
-                        {row.rdtSection} &gt; {row.route} &gt; {row.location}
-                      </td>
                       <td className="px-8 py-4 text-sm text-slate-700 font-medium">
                         {row.description ? row.description : <span className="italic text-slate-400">No text provided</span>}
                       </td>

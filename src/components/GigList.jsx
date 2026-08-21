@@ -9,9 +9,6 @@ export default function GigList() {
   // Form State
   const today = new Date().toISOString().split('T')[0];
   const [date, setDate] = useState(today);
-  const [rdtSection, setRdtSection] = useState('RDT1');
-  const [route, setRoute] = useState('Route 1');
-  const [location, setLocation] = useState('1');
   const [description, setDescription] = useState('');
 
   // Audio Recording State
@@ -85,9 +82,9 @@ export default function GigList() {
     addGig({
       inspector: authUser.name,
       date,
-      rdtSection,
-      route: rdtSection === 'Toll N' || rdtSection === 'Toll S' ? '-' : route,
-      location,
+      rdtSection: 'N/A',
+      route: 'N/A',
+      location: 'N/A',
       description,
       audioData: audioBase64
     });
@@ -153,77 +150,21 @@ export default function GigList() {
           </div>
           <form onSubmit={handleAddGig} className="space-y-6">
             <div className="bg-slate-50 p-6 rounded-xl border border-slate-100">
-              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 border-b border-slate-200 pb-3">Location Details</h3>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Date</label>
-                  <input type="date" value={date} onChange={(e) => setDate(e.target.value)} required className="block w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-red-500 focus:border-red-500" />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Node</label>
-                  <input
-                    type="text"
-                    list="gig-rdt-options"
-                    value={rdtSection}
-                    onChange={(e) => setRdtSection(e.target.value)}
-                    onClick={(e) => e.target.select()}
-                    required
-                    className="block w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                  />
-                  <datalist id="gig-rdt-options">
-                    {[...Array.from({ length: 10 }, (_, i) => `RDT${i + 1}`), 'Toll N', 'Toll S'].map(r => <option key={r} value={r} />)}
-                  </datalist>
-                </div>
-                {rdtSection !== 'Toll N' && rdtSection !== 'Toll S' && (
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">Route</label>
-                    <input
-                      type="text"
-                      list="gig-route-options"
-                      value={route}
-                      onChange={(e) => setRoute(e.target.value)}
-                      onClick={(e) => e.target.select()}
-                      required
-                      className="block w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                    />
-                    <datalist id="gig-route-options">
-                      {Array.from({ length: 20 }, (_, i) => `Route ${i + 1}`).map(r => <option key={r} value={r} />)}
-                    </datalist>
-                  </div>
-                )}
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Location</label>
-                  <input
-                    type="text"
-                    list="gig-location-options"
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                    onClick={(e) => e.target.select()}
-                    required
-                    className="block w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                    placeholder="e.g. 1"
-                  />
-                  <datalist id="gig-location-options">
-                    {(rdtSection === 'Toll N' || rdtSection === 'Toll S' 
-                      ? Array.from({ length: 301 }, (_, i) => `${i}`)
-                      : Array.from({ length: 20 }, (_, i) => `${i + 1}`)
-                    ).map(l => <option key={l} value={l} />)}
-                  </datalist>
-                </div>
-              </div>
-            </div>
-            
-            <div className="bg-slate-50 p-6 rounded-xl border border-slate-100">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 border-b border-slate-200 pb-3">Deficiency Report</h3>
               
               <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">Date</label>
+                  <input type="date" value={date} onChange={(e) => setDate(e.target.value)} required className="block w-full max-w-xs px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-red-500 focus:border-red-500" />
+                </div>
+                
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-2">Description of Deficiency</label>
                   <textarea
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    rows={3}
-                    placeholder="e.g. Bad cleanup at mile marker 2, missing gravel..."
+                    rows={4}
+                    placeholder="e.g. Bad cleanup at route 1 location 2, missing gravel..."
                     className="block w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-red-500 focus:border-red-500 resize-none"
                   />
                 </div>
@@ -283,7 +224,6 @@ export default function GigList() {
               <thead className="bg-slate-50">
                 <tr>
                   <th scope="col" className="px-8 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Date</th>
-                  <th scope="col" className="px-8 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Hierarchy</th>
                   <th scope="col" className="px-8 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Description of Deficiency</th>
                   <th scope="col" className="px-8 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Audio</th>
                   <th scope="col" className="px-8 py-4 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">Action</th>
@@ -293,9 +233,6 @@ export default function GigList() {
                 {myGigList.map((row, idx) => (
                   <tr key={idx} className={`hover:bg-slate-50 transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}`}>
                     <td className="px-8 py-4 whitespace-nowrap text-sm font-medium text-slate-900">{formatDate(row.date)}</td>
-                    <td className="px-8 py-4 whitespace-nowrap text-sm text-slate-700">
-                      {row.rdtSection} &gt; {row.route} &gt; {row.location}
-                    </td>
                     <td className="px-8 py-4 text-sm text-slate-700 font-medium">
                       {row.description ? row.description : <span className="text-slate-400 italic">No text provided</span>}
                     </td>
