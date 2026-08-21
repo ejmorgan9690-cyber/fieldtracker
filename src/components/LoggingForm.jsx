@@ -105,6 +105,8 @@ export default function LoggingForm() {
 
   const [date, setDate] = useState(getLocalDateString());
   const [dateManuallyChanged, setDateManuallyChanged] = useState(false);
+  const [lastRoute, setLastRoute] = useState(localStorage.getItem('fieldTrackerLastRoute') || '');
+  const [lastLocation, setLastLocation] = useState(localStorage.getItem('fieldTrackerLastLocation') || '');
   const [taskType, setTaskType] = useState('Bore');
   const [psNumber, setPsNumber] = useState('');
   const [boreNumber, setBoreNumber] = useState('1');
@@ -138,9 +140,15 @@ export default function LoggingForm() {
   }, [dateManuallyChanged]);
   
   const [rdtSection, setRdtSection] = useState('RDT1');
-  const [route, setRoute] = useState('1');
-  const [location, setLocation] = useState('1');
+  const [route, setRoute] = useState(lastRoute || '1');
+  const [location, setLocation] = useState(lastLocation || '1');
   const [footage, setFootage] = useState('');
+
+  // Keep manual form inputs synced with the sticky memory across voice/manual submits
+  useEffect(() => {
+    if (lastRoute) setRoute(lastRoute);
+    if (lastLocation) setLocation(lastLocation);
+  }, [lastRoute, lastLocation]);
   
   // Unit Code State
   const [unitCode, setUnitCode] = useState('');
@@ -221,8 +229,8 @@ export default function LoggingForm() {
     setVoiceData({
       town: town,
       rdtSection: rdtSection,
-      route: '',
-      location: '',
+      route: lastRoute,
+      location: lastLocation,
       taskType: 'Bore',
       specNumber: '1',
       footage: '',
@@ -342,11 +350,17 @@ export default function LoggingForm() {
   const parseVoiceTranscript = (text) => {
     let lower = text.toLowerCase().replace(/[.,!]/g, '');
 
+    let isAutoSubmit = false;
+    if (lower.match(/\bsubmit\b/)) {
+      isAutoSubmit = true;
+      lower = lower.replace(/\bsubmit\b/g, ''); // Scrub to prevent interference
+    }
+
     let parsed = {
       town: town,
       rdtSection: rdtSection,
-      route: '',
-      location: '',
+      route: lastRoute,
+      location: lastLocation,
       taskType: 'Bore',
       specNumber: '1',
       footage: '',
@@ -389,7 +403,17 @@ export default function LoggingForm() {
 
     // Look for numbers trailing words like "bore", "drop", etc. (Handles "bore number 1" or "bore 1")
     const numMatch = [...lower.matchAll(/(?:number|bore|drop|hole)\s*(?:number\s*)?(\d+)/g)].pop();
-    if (numMatch) parsed.specNumber = String(numMatch[1]);
+    if (numMatch) {
+      parsed.specNumber = String(numMatch[1]);
+    } else if (parsed.taskType === 'Bore') {
+      // Smart Auto-Increment: Find highest bore logged today and add 1
+      const today = getLocalDateString();
+      const todaysBores = entries.filter(e => e.date.includes(today) && e.task_type === 'Bore');
+      if (todaysBores.length > 0) {
+        const maxBore = Math.max(...todaysBores.map(e => parseInt(e.bore_number) || 0));
+        parsed.specNumber = String(maxBore + 1);
+      }
+    }
 
     const ftMatch = [...lower.matchAll(/(\d+)\s*(?:feet|foot|ft|')/g)].pop();
     if (ftMatch) {
@@ -452,37 +476,48 @@ export default function LoggingForm() {
     if (psMatch) parsed.psNumber = String(psMatch[1]);
 
     setVoiceData(parsed);
+
+    if (isAutoSubmit) {
+      submitVoiceLog(parsed);
+    }
   };
   
-  const submitVoiceLog = () => {
-    if (!voiceData.route || !voiceData.location) {
+  const submitVoiceLog = (payload = null) => {
+    const data = payload && payload.route ? payload : voiceData;
+    if (!data.route || !data.location) {
       alert("Missing Route or Location in voice data!");
       return;
     }
     
     addEntry({
-      town: voiceData.town,
+      town: data.town,
       date: getLocalDateString(),
-      rdtSection: voiceData.rdtSection,
-      route: voiceData.route,
-      location: voiceData.location,
-      taskType: voiceData.taskType,
-      footage: voiceData.footage,
-      boreNumber: voiceData.taskType === 'Bore' ? voiceData.specNumber : null,
-      fiberCount: voiceData.taskType === 'Fiber' ? voiceData.fiberCount : null,
-      handHoleNumber: voiceData.taskType === 'Hand Hole' ? voiceData.specNumber : null,
-      dropNumber: voiceData.taskType === 'Drop' ? voiceData.specNumber : null,
-      isAddedBore: voiceData.isAddedBore,
-      isFiberLoop: voiceData.isFiberLoop,
-      isPlowRock: voiceData.isPlowRock,
-      loopQuantity: voiceData.loopQuantity,
-      hasGroundRod: voiceData.hasGroundRod,
-      hasSign: voiceData.hasSign,
-      unitCode: voiceData.unitCode,
-      psNumber: voiceData.psNumber,
-      gpsCoordinates: voiceData.gpsCoordinates,
+      rdtSection: data.rdtSection,
+      route: data.route,
+      location: data.location,
+      taskType: data.taskType,
+      footage: data.footage,
+      boreNumber: data.taskType === 'Bore' ? data.specNumber : null,
+      fiberCount: data.taskType === 'Fiber' ? data.fiberCount : null,
+      handHoleNumber: data.taskType === 'Hand Hole' ? data.specNumber : null,
+      dropNumber: data.taskType === 'Drop' ? data.specNumber : null,
+      isAddedBore: data.isAddedBore,
+      isFiberLoop: data.isFiberLoop,
+      isPlowRock: data.isPlowRock,
+      loopQuantity: data.loopQuantity,
+      hasGroundRod: data.hasGroundRod,
+      hasSign: data.hasSign,
+      unitCode: data.unitCode,
+      psNumber: data.psNumber,
+      gpsCoordinates: data.gpsCoordinates,
       inspector: authUser.name
     });
+
+    localStorage.setItem('fieldTrackerLastRoute', data.route);
+    localStorage.setItem('fieldTrackerLastLocation', data.location);
+    setLastRoute(data.route);
+    setLastLocation(data.location);
+
     stopVoiceRecognition();
     setShowVoiceModal(false);
     setSuccessMsg(true);
@@ -571,6 +606,11 @@ export default function LoggingForm() {
         notes: `${unitCode ? `UNIT: ${unitCode}` : ''} ${isPlowRock ? '+ BM71' : ''} ${isFiberLoop ? `+ LOOP (${loopQuantity})` : ''}`.trim()
       });
     }
+
+    localStorage.setItem('fieldTrackerLastRoute', route);
+    localStorage.setItem('fieldTrackerLastLocation', location);
+    setLastRoute(route);
+    setLastLocation(location);
 
     if (taskType !== 'Drop' && taskType !== 'Hand Hole') setFootage('');
     setDropNumber('');
