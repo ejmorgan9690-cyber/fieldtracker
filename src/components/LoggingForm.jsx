@@ -366,8 +366,8 @@ export default function LoggingForm() {
       }
     }
 
-    if (lower.includes('dirt')) parsed.unitCode = 'BM601D';
-    if (lower.includes('rock')) parsed.unitCode = 'BM601R';
+    if (lower.includes('dirt')) parsed.unitCode = 'BM61D';
+    if (lower.includes('rock')) parsed.unitCode = 'BM61R';
 
     // Extract valid fiber counts anywhere in the sentence (e.g. "48 fiber", "fiber 48")
     const allNumsForFiber = lower.match(/\b\d+\b/g) || [];
@@ -579,8 +579,8 @@ export default function LoggingForm() {
                     <label className="block text-xs font-bold text-slate-600 uppercase">Unit Code</label>
                     <select value={voiceData.unitCode} onChange={e => setVoiceData({...voiceData, unitCode: e.target.value})} className="w-full mt-1 p-2 border border-slate-300 rounded-lg font-semibold text-slate-800 bg-white focus:ring-2 focus:ring-indigo-500">
                       <option value="">Select Dirt/Rock</option>
-                      <option value="BM601D">BM601D (Dirt)</option>
-                      <option value="BM601R">BM601R (Rock)</option>
+                      <option value="BM61D">BM61D (Dirt)</option>
+                      <option value="BM61R">BM61R (Rock)</option>
                     </select>
                   </div>
                 </div>
