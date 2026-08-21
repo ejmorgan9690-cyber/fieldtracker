@@ -215,7 +215,7 @@ export default function LoggingForm() {
     // Always create a FRESH instance for each session
     const recognition = new SpeechRecognition();
     recognition.continuous = true;
-    recognition.interimResults = true;
+    recognition.interimResults = false; // Turn off interim to stop spammy word repeats
     recognition.lang = 'en-US';
 
     recognition.onstart = () => setIsListening(true);
@@ -528,7 +528,7 @@ export default function LoggingForm() {
                   <h2 className="text-2xl font-bold text-white tracking-tight">Daily Production Log</h2>
                   <button
                     type="button"
-                    onClick={startVoiceRecognition}
+                    onClick={() => isListening ? stopVoiceRecognition() : startVoiceRecognition()}
                     className={`inline-flex items-center px-3 py-1.5 border border-transparent rounded-lg shadow-sm text-xs font-bold text-white transition-colors ${isListening ? 'bg-red-500 animate-pulse' : 'bg-indigo-500 hover:bg-indigo-600'}`}
                   >
                     {isListening ? <MicOff className="h-4 w-4 mr-1.5" /> : <Mic className="h-4 w-4 mr-1.5" />}
