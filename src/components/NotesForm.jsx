@@ -15,7 +15,6 @@ export default function NotesForm() {
 
   const [date, setDate] = useState(getLocalDateString());
   const [dateManuallyChanged, setDateManuallyChanged] = useState(false);
-  const [town, setTown] = useState(() => localStorage.getItem('fieldTrackerTown') || '');
   
   const [notesText, setNotesText] = useState('');
   const [gpsCoordinates, setGpsCoordinates] = useState('');
@@ -47,10 +46,6 @@ export default function NotesForm() {
       clearInterval(interval);
     };
   }, [dateManuallyChanged]);
-
-  useEffect(() => {
-    localStorage.setItem('fieldTrackerTown', town);
-  }, [town]);
 
   const handleGetLocation = () => {
     if (!navigator.geolocation) {
@@ -118,10 +113,6 @@ export default function NotesForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!town) {
-      alert("Please select a Town / Exchange.");
-      return;
-    }
     if (!notesText.trim() && !audioBlob) {
       alert("Please enter some text or record a voice note.");
       return;
@@ -135,7 +126,7 @@ export default function NotesForm() {
     const payload = {
       inspector: authUser.name,
       date: date,
-      town: town,
+      town: 'N/A',
       notesText: notesText,
       gpsCoordinates: gpsCoordinates,
       audioData: audioBase64
@@ -161,31 +152,15 @@ export default function NotesForm() {
         <form onSubmit={handleSubmit} className="p-6 space-y-8">
           
           {/* Header Info */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50 p-6 rounded-xl border border-slate-100">
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1">Service Date</label>
-              <input 
-                type="date" 
-                value={date} 
-                onChange={e => { setDate(e.target.value); setDateManuallyChanged(true); }} 
-                className="w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1">Town / Exchange</label>
-              <select 
-                id="town" 
-                value={town} 
-                onChange={(e) => setTown(e.target.value)} 
-                className="w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                required 
-              >
-                <option value="">Select a town...</option>
-                <option value="Shidler">Shidler</option>
-                <option value="Wynona">Wynona</option>
-              </select>
-            </div>
+          <div className="bg-slate-50 p-6 rounded-xl border border-slate-100">
+            <label className="block text-sm font-semibold text-slate-700 mb-1">Service Date</label>
+            <input 
+              type="date" 
+              value={date} 
+              onChange={e => { setDate(e.target.value); setDateManuallyChanged(true); }} 
+              className="w-full sm:max-w-xs rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              required
+            />
           </div>
 
           {/* Note Text */}
