@@ -369,12 +369,12 @@ export default function LoggingForm() {
     if (lower.includes('dirt')) parsed.unitCode = 'BM601D';
     if (lower.includes('rock')) parsed.unitCode = 'BM601R';
 
-    const fiberCountMatch = lower.match(/(\d+)\s*(?:count|fiber|strand|strength)/);
-    if (fiberCountMatch) {
-       const count = fiberCountMatch[1];
-       if (['4', '12', '24', '48', '96', '144', '288'].includes(count)) {
-           parsed.fiberCount = `${count} count`;
-       }
+    // Extract valid fiber counts anywhere in the sentence (e.g. "48 fiber", "fiber 48")
+    const allNumsForFiber = lower.match(/\b\d+\b/g) || [];
+    const validCounts = ['4', '12', '24', '48', '96', '144', '288'];
+    const foundCount = allNumsForFiber.find(n => validCounts.includes(n) && n !== parsed.route && n !== parsed.location);
+    if (foundCount) {
+        parsed.fiberCount = `${foundCount} count`;
     }
 
     if (lower.includes('loop')) {
@@ -572,6 +572,31 @@ export default function LoggingForm() {
                   <input type="text" value={voiceData.footage} onChange={e => setVoiceData({...voiceData, footage: e.target.value})} className="w-full mt-1 p-2 border border-slate-300 rounded-lg font-semibold text-slate-800 bg-white focus:ring-2 focus:ring-indigo-500" />
                 </div>
               </div>
+
+              {voiceData.taskType === 'Bore' && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-600 uppercase">Unit Code</label>
+                    <select value={voiceData.unitCode} onChange={e => setVoiceData({...voiceData, unitCode: e.target.value})} className="w-full mt-1 p-2 border border-slate-300 rounded-lg font-semibold text-slate-800 bg-white focus:ring-2 focus:ring-indigo-500">
+                      <option value="">Select Dirt/Rock</option>
+                      <option value="BM601D">BM601D (Dirt)</option>
+                      <option value="BM601R">BM601R (Rock)</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              {voiceData.taskType === 'Fiber' && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-600 uppercase">Fiber Size</label>
+                    <select value={voiceData.fiberCount} onChange={e => setVoiceData({...voiceData, fiberCount: e.target.value})} className="w-full mt-1 p-2 border border-slate-300 rounded-lg font-semibold text-slate-800 bg-white focus:ring-2 focus:ring-indigo-500">
+                      {FIBER_COUNTS.map(count => <option key={count} value={count}>{count}</option>)}
+                    </select>
+                  </div>
+                </div>
+              )}
+
               <div>
                 <label className="block text-xs font-bold text-slate-600 uppercase mb-1 flex items-center justify-between">
                   <span>GPS Coordinates</span>
