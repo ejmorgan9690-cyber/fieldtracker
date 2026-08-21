@@ -210,7 +210,7 @@ export const AppProvider = ({ children }) => {
         location: entry.location,
         task_type: entry.taskType,
         spec_number: specNumber,
-        footage: entry.footage,
+        footage: entry.footage ? Number(entry.footage) : null,
         inspector_name: entry.inspector,
         is_added_bore: entry.isAddedBore || false,
         gps_coordinates: entry.gpsCoordinates || null,
