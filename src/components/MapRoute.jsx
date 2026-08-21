@@ -78,24 +78,23 @@ const MapSearch = ({ geoData, entries, completedSegments, setShowLegend }) => {
       e.preventDefault();
       if (!entries || !geoData) return;
       
-      // Find the most recently accepted log
-      const latestAccepted = [...entries]
-        .filter(entry => entry.status === 'Accepted')
-        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
+        // Find the most recently logged entry (both Pending and Accepted)
+        const latestEntry = [...entries]
+          .sort((a, b) => new Date(b.created_at || b.date) - new Date(a.created_at || a.date))[0];
+          
+        if (!latestEntry) {
+          alert("No logs found yet.");
+          return;
+        }
         
-      if (!latestAccepted) {
-        alert("No accepted logs found yet.");
-        return;
-      }
-      
-      const tTown = latestAccepted.town || 'Shidler';
-      const tRdt = normalizeRdt(latestAccepted.rdtSection);
-      const tRoute = latestAccepted.route ? String(latestAccepted.route).replace('Route ', '') : '';
-      const tLoc = latestAccepted.location ? String(latestAccepted.location) : '';
-      
-      // Auto-fill the search form to match the latest
-      setSearchTown(tTown);
-      setSearchRdt(latestAccepted.rdtSection);
+        const tTown = latestEntry.town || 'Shidler';
+        const tRdt = normalizeRdt(latestEntry.rdtSection);
+        const tRoute = latestEntry.route ? String(latestEntry.route).replace('Route ', '') : '';
+        const tLoc = latestEntry.location ? String(latestEntry.location) : '';
+        
+        // Auto-fill the search form to match the latest
+        setSearchTown(tTown);
+        setSearchRdt(latestEntry.rdtSection);
       setSearchRoute(tRoute);
       setSearchLoc(tLoc);
 
@@ -332,7 +331,7 @@ export default function MapRoute() {
     
 
     entries.forEach(entry => {
-      if (entry.status === 'Accepted' && entry.taskType !== 'Drop') {
+      if ((entry.status === 'Accepted' || entry.status === 'Pending') && entry.taskType !== 'Drop') {
         const town = entry.town || 'Shidler';
         const rdt = normalizeRdt(entry.rdtSection);
         const route = entry.route ? String(entry.route).replace('Route ', '') : '';
