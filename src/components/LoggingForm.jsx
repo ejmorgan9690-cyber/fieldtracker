@@ -251,6 +251,14 @@ export default function LoggingForm() {
       for (let i = event.resultIndex; i < event.results.length; ++i) {
         newPhrases += event.results[i][0].transcript + ' ';
       }
+      
+      // Auto-correct common misinterpretations before saving to transcript
+      newPhrases = newPhrases.replace(/\bboard\b/gi, 'bore')
+                             .replace(/\bboar\b/gi, 'bore')
+                             .replace(/\bbored\b/gi, 'bore')
+                             .replace(/\bfour\s+number\b/gi, 'bore number') // sometimes "bore number" -> "four number"
+                             .replace(/\ba\s+(\d+)/gi, '$1 ');
+
       transcriptRef.current += newPhrases;
       setVoiceTranscript(transcriptRef.current);
       parseVoiceTranscript(transcriptRef.current);
@@ -332,8 +340,8 @@ export default function LoggingForm() {
     else if (lower.includes('hand hole') || lower.includes('handhole')) parsed.taskType = 'Hand Hole';
     else if (lower.includes('drop')) parsed.taskType = 'Drop';
 
-    // Look for numbers trailing words like "bore", "board", "drop", etc.
-    const numMatch = lower.match(/(?:number|bore|board|boar|four|drop|hole)\s*(\d+)/);
+    // Look for numbers trailing words like "bore", "drop", etc. (Handles "bore number 1" or "bore 1")
+    const numMatch = lower.match(/(?:number|bore|drop|hole)\s*(?:number\s*)?(\d+)/);
     if (numMatch) parsed.specNumber = String(numMatch[1]);
 
     const ftMatch = lower.match(/(\d+)\s*(?:feet|foot|ft|')/);
