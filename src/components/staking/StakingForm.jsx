@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAppContext } from '../../context/AppContext';
-import { MapPin, Image as ImageIcon, Send, X, AlertCircle } from 'lucide-react';
+import { MapPin, Send } from 'lucide-react';
 
 export default function StakingForm() {
   const { authUser, addStakingPoint } = useAppContext();
@@ -12,9 +12,6 @@ export default function StakingForm() {
   const [lat, setLat] = useState(null);
   const [lng, setLng] = useState(null);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
-  
-  const [referenceImage, setReferenceImage] = useState(null);
-  const [imagePreview, setImagePreview] = useState(null);
 
   const getGPSLocation = () => {
     if (!navigator.geolocation) {
@@ -38,28 +35,6 @@ export default function StakingForm() {
     );
   };
 
-  const handleImageUpload = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    if (file.size > 10 * 1024 * 1024) {
-      alert("Image is too large. Please choose an image under 10MB.");
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setReferenceImage(reader.result);
-      setImagePreview(reader.result);
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const removeImage = () => {
-    setReferenceImage(null);
-    setImagePreview(null);
-  };
-
   const handleSubmit = (e) => {
     e.preventDefault();
     
@@ -80,14 +55,12 @@ export default function StakingForm() {
       location,
       lat,
       lng,
-      referenceImage
+      referenceImage: null // Kept for DB compatibility if needed, but no longer uploaded here
     });
 
     // Reset form for next entry
     setLat(null);
     setLng(null);
-    setReferenceImage(null);
-    setImagePreview(null);
     // Keep hierarchy selections to make it easy to log the next point nearby
     alert("Staking point logged successfully!");
   };
@@ -151,34 +124,6 @@ export default function StakingForm() {
                 ))}
               </select>
             </div>
-          </div>
-
-          <div className="bg-slate-50 p-6 rounded-xl border border-slate-100">
-            <h4 className="text-sm font-bold text-slate-800 mb-4">Reference Map Image (Optional)</h4>
-            {!imagePreview ? (
-              <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-slate-300 border-dashed rounded-xl cursor-pointer bg-white hover:bg-slate-50 transition-colors">
-                <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                  <ImageIcon className="h-8 w-8 text-slate-400 mb-2" />
-                  <p className="text-sm text-slate-500 font-medium">Upload hard copy map photo</p>
-                </div>
-                <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
-              </label>
-            ) : (
-              <div className="relative inline-block w-full">
-                <img src={imagePreview} alt="Reference map" className="w-full max-h-64 object-contain rounded-lg border border-slate-200" />
-                <button
-                  type="button"
-                  onClick={removeImage}
-                  className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-full shadow-md hover:bg-red-600 transition-colors"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            )}
-            <p className="mt-3 text-xs text-slate-500">
-              <AlertCircle className="h-3 w-3 inline mr-1" />
-              Upload a picture of the paper map for this specific route. You can view this later when searching for the drop point.
-            </p>
           </div>
 
           <div className="bg-emerald-50/50 p-6 rounded-xl border border-emerald-100">
