@@ -387,10 +387,9 @@ export default function LoggingForm() {
       if (lower.includes('dirt')) parsed.unitCode = 'BM61D';
       if (lower.includes('rock')) parsed.unitCode = 'BM61R';
     } else if (parsed.taskType === 'Plow Duct') {
-      const plowMatch = lower.match(/(?:one|two|three|four|\d)\s*(?:duct|pipe|conduit)/) || lower.match(/(?:duct|pipe|conduit)\s*(one|two|three|four|\d)/);
-      if (plowMatch) {
-         const num = plowMatch[1].replace('one','1').replace('two','2').replace('three','3').replace('four','4');
-         if (['1','2','3','4'].includes(num)) parsed.unitCode = `BFOV (1.25)(${num})`;
+      const plowMatch = lower.match(/\b([1234])\b\s*(?:duct|pipe|conduit|plow)\b/) || lower.match(/\b(?:duct|pipe|conduit|plow)\s*\b([1234])\b/);
+      if (plowMatch && plowMatch[1]) {
+         parsed.unitCode = `BFOV (1.25)(${plowMatch[1]})`;
       }
       if (lower.includes('rock')) parsed.isPlowRock = true;
     } else if (parsed.taskType === 'Fiber') {
