@@ -600,7 +600,7 @@ export default function LoggingForm() {
               </div>
               <div className="flex items-center text-sm font-medium text-slate-300">
                 <Calendar className="h-4 w-4 mr-2 text-indigo-400" />
-                Date: <span className="text-white ml-1">{new Date(date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                Date: <span className="text-white ml-1">{new Date(date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</span>
               </div>
             </div>
           </div>
