@@ -390,6 +390,9 @@ export default function LoggingForm() {
       parsed.location = String(locMatch[1]);
       lower = lower.replace(locMatch[0], ''); // Scrub to prevent number cross-talk
     }
+    
+    if (lower.lastIndexOf('shidler') > lower.lastIndexOf('wynona')) parsed.town = 'Shidler';
+    else if (lower.lastIndexOf('wynona') !== -1) parsed.town = 'Wynona';
 
     const boreIdx = Math.max(lower.lastIndexOf('bore'), lower.lastIndexOf('board'), lower.lastIndexOf('boar'));
     const trenchIdx = lower.lastIndexOf('trench');
@@ -650,6 +653,14 @@ export default function LoggingForm() {
             <p className="text-sm text-slate-500 mb-6 italic border-l-4 border-indigo-200 pl-3 py-1 bg-indigo-50/50 rounded-r-lg">"{voiceTranscript}"</p>
             
             <div className="space-y-4 mb-6">
+              <div>
+                <label className="block text-xs font-bold text-slate-600 uppercase">Town / Exchange</label>
+                <select value={voiceData.town} onChange={e => setVoiceData({...voiceData, town: e.target.value})} className="w-full mt-1 p-2 border border-slate-300 rounded-lg font-semibold text-slate-800 bg-white focus:ring-2 focus:ring-indigo-500">
+                  <option value="">Select Town...</option>
+                  <option value="Shidler">Shidler</option>
+                  <option value="Wynona">Wynona</option>
+                </select>
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-600 uppercase">Node</label>
