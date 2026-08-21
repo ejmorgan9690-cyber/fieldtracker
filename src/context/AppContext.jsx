@@ -68,6 +68,11 @@ export const AppProvider = ({ children }) => {
             location: row.location,
             psNumber: row.ps_number || '',
             imageData: row.image_data,
+            notes: row.notes || '',
+            swap_start_lat: row.swap_start_lat || null,
+            swap_start_lng: row.swap_start_lng || null,
+            swap_end_lat: row.swap_end_lat || null,
+            swap_end_lng: row.swap_end_lng || null,
             created_at: row.created_at || null
           }));
           setRedlines(mappedRedlines);
