@@ -289,6 +289,10 @@ export default function LoggingForm() {
                              .replace(/\bplough\b/gi, 'plow')
                              .replace(/\bploughed\b/gi, 'plow')
                              .replace(/\bwow\b/gi, 'plow')
+                             .replace(/\bduck\b/gi, 'duct')
+                             .replace(/\bducks\b/gi, 'duct')
+                             .replace(/\broot\b/gi, 'route')
+                             .replace(/\bfrench\b/gi, 'trench')
                              .replace(/\b4\s+number\b/gi, 'bore number') // "bore number" misheard as "four number" -> translates to "4 number" above
                              .replace(/\ba\s+(\d+)/gi, '$1 ');
 
