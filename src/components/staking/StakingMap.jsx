@@ -97,10 +97,36 @@ export default function StakingMap() {
     }
     
     try {
-      const response = await fetch(`/kml/${filename}`);
+      const response = await fetch(filename.endsWith('.geojson') ? `/${filename}` : `/kml/${filename}`);
       if (!response.ok) throw new Error("Failed to load map");
-      const kmlText = await response.text();
-      processKmlText(kmlText);
+      if (filename.endsWith('.geojson')) {
+        const jsonData = await response.json();
+        setGeoJsonData(jsonData);
+        
+        if (jsonData.features && jsonData.features.length > 0) {
+          const firstFeature = jsonData.features[0];
+          let coords = null;
+          if (firstFeature.geometry.type === 'Point') {
+            coords = [firstFeature.geometry.coordinates[1], firstFeature.geometry.coordinates[0]];
+          } else if (firstFeature.geometry.type === 'LineString' || firstFeature.geometry.type === 'Polygon') {
+            const firstCoord = firstFeature.geometry.coordinates[0];
+            if (Array.isArray(firstCoord[0])) {
+               coords = [firstCoord[0][1], firstCoord[0][0]];
+            } else {
+               coords = [firstCoord[1], firstCoord[0]];
+            }
+          }
+          if (coords && !isNaN(coords[0]) && !isNaN(coords[1])) {
+            setMapCenter(coords);
+            if (mapRef.current) {
+              mapRef.current.flyTo(coords, 14);
+            }
+          }
+        }
+      } else {
+        const kmlText = await response.text();
+        processKmlText(kmlText);
+      }
     } catch (error) {
       console.error("Error loading preloaded map:", error);
       alert("Could not load the selected map.");
@@ -157,7 +183,7 @@ export default function StakingMap() {
                    className="block w-full sm:w-auto px-3 py-2 text-sm rounded-lg border border-slate-300 bg-white text-slate-700 font-semibold shadow-sm focus:ring-2 focus:ring-indigo-500"
                  >
                    <option value="">-- Load Office Map --</option>
-                   <option value="KanOkla.kml">KanOkla Telephone</option>
+                   <option value="route.geojson">KanOkla Telephone (Full Route)</option>
                  </select>
                  <span className="text-slate-400 text-xs sm:hidden">or</span>
                  <label className="flex items-center px-4 py-2 bg-indigo-50 text-indigo-700 font-semibold rounded-lg hover:bg-indigo-100 transition-colors cursor-pointer w-full sm:w-auto justify-center shadow-sm">
@@ -212,11 +238,21 @@ export default function StakingMap() {
                 <GeoJSON 
                   key={JSON.stringify(geoJsonData)} 
                   data={geoJsonData} 
-                  style={{
-                    color: '#4f46e5', // indigo-600
-                    weight: 3,
-                    opacity: 0.7
-                  }}
+                  style={(feature) => {
+                  if (feature.geometry.type === 'LineString' || feature.geometry.type === 'MultiLineString') {
+                    return { color: '#3b82f6', weight: 4, opacity: 0.8 };
+                  }
+                  if (feature.geometry.type === 'Polygon' || feature.geometry.type === 'MultiPolygon') {
+                    return { color: '#8b5cf6', fillColor: '#8b5cf6', weight: 2, fillOpacity: 0.2 };
+                  }
+                  return { color: '#4f46e5', weight: 3, opacity: 0.7 };
+                }}
+                pointToLayer={(feature, latlng) => {
+                  if (feature.properties && feature.properties.description && feature.properties.description.includes('Handhole')) {
+                    return L.circleMarker(latlng, { radius: 5, color: '#f59e0b', fillColor: '#f59e0b', fillOpacity: 1, weight: 1 });
+                  }
+                  return L.circleMarker(latlng, { radius: 3, color: '#4f46e5', fillColor: '#4f46e5', fillOpacity: 1, weight: 1 });
+                }}
                 />
               )}
 
