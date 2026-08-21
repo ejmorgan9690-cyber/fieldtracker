@@ -1,6 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef } from 'react';
 import { useAppContext, formatDate } from '../context/AppContext';
-import { ClipboardList, Plus, X, Trash2, AlertCircle } from 'lucide-react';
+import { ClipboardList, Plus, X, Trash2, AlertCircle, Mic, Square } from 'lucide-react';
 
 export default function GigList() {
   const { entries, gigs, authUser, addGig, deleteGig } = useAppContext();
@@ -14,18 +14,87 @@ export default function GigList() {
   const [location, setLocation] = useState('1');
   const [description, setDescription] = useState('');
 
-  const handleAddGig = (e) => {
+  // Audio Recording State
+  const [isRecording, setIsRecording] = useState(false);
+  const [audioBlob, setAudioBlob] = useState(null);
+  const [audioUrl, setAudioUrl] = useState('');
+  const mediaRecorderRef = useRef(null);
+  const chunksRef = useRef([]);
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorderRef.current = new MediaRecorder(stream);
+      chunksRef.current = [];
+
+      mediaRecorderRef.current.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
+
+      mediaRecorderRef.current.onstop = () => {
+        const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+        setAudioBlob(blob);
+        setAudioUrl(URL.createObjectURL(blob));
+        // Stop all tracks to release mic
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      mediaRecorderRef.current.start();
+      setIsRecording(true);
+    } catch (err) {
+      console.error("Microphone error:", err);
+      alert("Could not access microphone. Please check permissions.");
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+    }
+  };
+
+  const deleteRecording = () => {
+    setAudioBlob(null);
+    setAudioUrl('');
+    chunksRef.current = [];
+  };
+
+  const blobToBase64 = (blob) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  };
+
+  const handleAddGig = async (e) => {
     e.preventDefault();
+    
+    if (!description.trim() && !audioBlob) {
+      alert("Please enter a description or record a voice note.");
+      return;
+    }
+
+    let audioBase64 = null;
+    if (audioBlob) {
+      audioBase64 = await blobToBase64(audioBlob);
+    }
+
     addGig({
       inspector: authUser.name,
       date,
       rdtSection,
       route: rdtSection === 'Toll N' || rdtSection === 'Toll S' ? '-' : route,
       location,
-      description
+      description,
+      audioData: audioBase64
     });
+    
     setShowForm(false);
     setDescription('');
+    deleteRecording();
   };
 
   // Combine legacy hand holes with new gig entries
@@ -146,16 +215,45 @@ export default function GigList() {
             
             <div className="bg-slate-50 p-6 rounded-xl border border-slate-100">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 border-b border-slate-200 pb-3">Deficiency Report</h3>
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Description of Deficiency</label>
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  required
-                  rows={3}
-                  placeholder="e.g. Bad cleanup at mile marker 2, missing gravel..."
-                  className="block w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-red-500 focus:border-red-500 resize-none"
-                />
+              
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">Description of Deficiency</label>
+                  <textarea
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    rows={3}
+                    placeholder="e.g. Bad cleanup at mile marker 2, missing gravel..."
+                    className="block w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-red-500 focus:border-red-500 resize-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">Voice Recording (Optional)</label>
+                  <div className="bg-white p-4 rounded-xl border border-slate-200 flex flex-col sm:flex-row items-center gap-4">
+                    {!audioBlob ? (
+                      <>
+                        {!isRecording ? (
+                          <button type="button" onClick={startRecording} className="flex items-center px-4 py-2 bg-rose-100 text-rose-700 hover:bg-rose-200 rounded-lg font-semibold transition-colors w-full sm:w-auto justify-center">
+                            <Mic className="h-5 w-5 mr-2" /> Start Recording
+                          </button>
+                        ) : (
+                          <button type="button" onClick={stopRecording} className="flex items-center px-4 py-2 bg-red-500 text-white hover:bg-red-600 rounded-lg font-semibold transition-colors w-full sm:w-auto justify-center animate-pulse">
+                            <Square className="h-5 w-5 mr-2" /> Stop Recording
+                          </button>
+                        )}
+                        <span className="text-sm text-slate-500">Record a voice note instead of typing</span>
+                      </>
+                    ) : (
+                      <>
+                        <audio src={audioUrl} controls className="w-full max-w-sm" />
+                        <button type="button" onClick={deleteRecording} className="flex items-center px-3 py-2 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-lg font-semibold transition-colors w-full sm:w-auto justify-center">
+                          <Trash2 className="h-4 w-4 mr-2" /> Delete
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -187,6 +285,7 @@ export default function GigList() {
                   <th scope="col" className="px-8 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Date</th>
                   <th scope="col" className="px-8 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Hierarchy</th>
                   <th scope="col" className="px-8 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Description of Deficiency</th>
+                  <th scope="col" className="px-8 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Audio</th>
                   <th scope="col" className="px-8 py-4 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">Action</th>
                 </tr>
               </thead>
@@ -198,7 +297,16 @@ export default function GigList() {
                       {row.rdtSection} &gt; {row.route} &gt; {row.location}
                     </td>
                     <td className="px-8 py-4 text-sm text-slate-700 font-medium">
-                      {row.description}
+                      {row.description ? row.description : <span className="text-slate-400 italic">No text provided</span>}
+                    </td>
+                    <td className="px-8 py-4 whitespace-nowrap">
+                      {row.audioData ? (
+                        <audio src={row.audioData} controls className="h-8 w-48" />
+                      ) : (
+                        <span className="text-slate-400 text-sm italic flex items-center">
+                          <Mic className="h-3 w-3 mr-1 opacity-50" /> No audio
+                        </span>
+                      )}
                     </td>
                     <td className="px-8 py-4 whitespace-nowrap text-center">
                       {!row.isLegacy && (
