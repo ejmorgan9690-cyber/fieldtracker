@@ -5,7 +5,7 @@ import { Trash2, Map } from 'lucide-react';
 export default function MyHistory() {
   const { entries, dailies, redlines, authUser, deleteEntry, deleteDaily, deleteRedline } = useAppContext();
   const [view, setView] = useState('production'); // 'production' | 'dailies' | 'redlines'
-  const [compactView, setCompactView] = useState(false);
+  const compactView = true;
 
   // Filter for only current user's entries
   const myEntries = useMemo(() => {
@@ -71,17 +71,9 @@ export default function MyHistory() {
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 sm:p-8 animate-in fade-in">
           <div className="mb-6 pb-6 border-b border-slate-100 flex justify-between items-end">
             <div>
-              <h2 className="text-2xl font-bold text-slate-800 tracking-tight">My Production History</h2>
+              <h2 className="text-xl font-bold text-slate-900 tracking-tight">Production Logs</h2>
               <p className="mt-1 text-sm text-slate-500">Review or delete your previously submitted production logs.</p>
             </div>
-            <button
-              onClick={() => setCompactView(!compactView)}
-              className={`hidden sm:hidden md:hidden lg:hidden xl:hidden min-[300px]:flex px-3 py-1.5 text-xs font-bold rounded-lg border transition-colors items-center ${compactView ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'}`}
-              title="Toggle Zoom Out"
-            >
-              <Map className="w-3 h-3 mr-1.5" />
-              {compactView ? 'Zoomed Out' : 'Zoom Out'}
-            </button>
           </div>
           
           <div className="overflow-x-auto">
