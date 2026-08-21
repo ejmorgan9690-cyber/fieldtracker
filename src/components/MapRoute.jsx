@@ -294,7 +294,7 @@ const MapSearch = ({ geoData, entries, completedSegments, setShowLegend }) => {
   };
 
 export default function MapRoute() {
-  const { entries } = useAppContext();
+  const { entries, redlines } = useAppContext();
   const [geoData, setGeoData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -704,6 +704,50 @@ export default function MapRoute() {
                     <Polyline positions={seg.bracketLine} pathOptions={{ color: '#dc2626', weight: 2, opacity: 0.8 }} />
                     <Polyline positions={seg.bracketStart} pathOptions={{ color: '#dc2626', weight: 2, opacity: 0.8 }} />
                     <Polyline positions={seg.bracketEnd} pathOptions={{ color: '#dc2626', weight: 2, opacity: 0.8 }} />
+                  </React.Fragment>
+                );
+              })}
+
+              {/* Custom Side Swap Redlines (from RedlinesForm) */}
+              {mapMode === 'redline' && redlines && redlines.filter(r => r.swap_start_lat && r.swap_start_lng && r.swap_end_lat && r.swap_end_lng).map(redline => {
+                const startPos = [parseFloat(redline.swap_start_lat), parseFloat(redline.swap_start_lng)];
+                const endPos = [parseFloat(redline.swap_end_lat), parseFloat(redline.swap_end_lng)];
+                
+                // Geographic Midpoint using turf
+                let midCoord = startPos;
+                try {
+                  const line = turf.lineString([
+                    [startPos[1], startPos[0]],
+                    [endPos[1], endPos[0]]
+                  ]);
+                  const midPt = turf.along(line, turf.length(line, {units: 'feet'}) / 2, {units: 'feet'});
+                  midCoord = [midPt.geometry.coordinates[1], midPt.geometry.coordinates[0]];
+                } catch (e) {
+                  console.warn("Midpoint calc failed for side swap", e);
+                }
+
+                const d = new Date(redline.service_date || redline.created_at || Date.now());
+                const dateStr = `${d.getMonth()+1}-${d.getDate()}-${String(d.getFullYear()).slice(-2)}`;
+                const notesStr = redline.notes ? `<br/><span style="font-size: 0.75rem; color: #4b5563; white-space: normal; display: block; max-width: 100px; margin-top: 2px; line-height: 1;">${redline.notes}</span>` : '';
+
+                const icon = L.divIcon({
+                  className: 'red-pen-label',
+                  html: `<div class="red-pen-container">
+                           <div class="red-pen-line"></div>
+                           <div class="red-pen-text">
+                             ${redline.inspector_name || redline.inspector || 'Inspector'}<br/>
+                             ${dateStr}
+                             ${notesStr}
+                           </div>
+                         </div>`,
+                  iconSize: [120, 80],
+                  iconAnchor: [0, 80]
+                });
+
+                return (
+                  <React.Fragment key={`redline-swap-${redline.id}`}>
+                    <Polyline positions={[startPos, endPos]} pathOptions={{ color: '#dc2626', weight: 4, dashArray: '5, 5', opacity: 0.9 }} />
+                    <Marker position={midCoord} icon={icon} zIndexOffset={1000} />
                   </React.Fragment>
                 );
               })}

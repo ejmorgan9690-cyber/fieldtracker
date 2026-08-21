@@ -332,15 +332,20 @@ export const AppProvider = ({ children }) => {
 
   const addRedline = async (redline) => {
     try {
-      const supabasePayload = {
-        inspector_name: redline.inspector,
-        service_date: redline.date,
-        section: redline.rdtSection,
-        route: redline.route,
-        location: redline.location,
-        ps_number: redline.psNumber,
-        image_data: redline.imageData
-      };
+        const supabasePayload = {
+          inspector_name: redline.inspector,
+          service_date: redline.date,
+          section: redline.rdtSection,
+          route: redline.route,
+          location: redline.location,
+          ps_number: redline.psNumber,
+          image_data: redline.imageData,
+          notes: redline.notes,
+          swap_start_lat: redline.swap_start_lat,
+          swap_start_lng: redline.swap_start_lng,
+          swap_end_lat: redline.swap_end_lat,
+          swap_end_lng: redline.swap_end_lng
+        };
 
       const { data, error } = await supabase.from('redlines').insert([supabasePayload]).select();
       if (error) console.error("Error saving redline to Supabase:", error);
