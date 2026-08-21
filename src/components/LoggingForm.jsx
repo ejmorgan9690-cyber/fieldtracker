@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useAppContext } from '../context/AppContext';
-import { Save, CheckCircle, FileSignature, Calendar, User, Upload, Image as ImageIcon, X, MapPin, AlertTriangle } from 'lucide-react';
+import { Save, CheckCircle, FileSignature, Calendar, User, Upload, Image as ImageIcon, X, MapPin, AlertTriangle, Mic, MicOff } from 'lucide-react';
 
 const RDT_SECTIONS = [...Array.from({ length: 10 }, (_, i) => `RDT${i + 1}`), 'Toll N', 'Toll S'];
 const ROUTES = Array.from({ length: 50 }, (_, i) => String(i + 1));
@@ -179,6 +179,125 @@ export default function LoggingForm() {
   
   const [successMsg, setSuccessMsg] = useState(false);
 
+  // --- Voice Logging State & Logic ---
+  const [isListening, setIsListening] = useState(false);
+  const [showVoiceModal, setShowVoiceModal] = useState(false);
+  const [voiceTranscript, setVoiceTranscript] = useState('');
+  const [voiceData, setVoiceData] = useState({});
+
+  const startVoiceRecognition = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Your browser does not support Voice-to-Text. Please use Chrome or Safari.");
+      return;
+    }
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = 'en-US';
+
+    recognition.onstart = () => setIsListening(true);
+    
+    recognition.onresult = (event) => {
+      const text = event.results[0][0].transcript;
+      setVoiceTranscript(text);
+      parseVoiceTranscript(text);
+      setShowVoiceModal(true);
+    };
+    
+    recognition.onerror = (event) => {
+      console.error("Speech error:", event.error);
+      setIsListening(false);
+      alert("Microphone error: " + event.error);
+    };
+    
+    recognition.onend = () => setIsListening(false);
+    
+    recognition.start();
+  };
+
+  const parseVoiceTranscript = (text) => {
+    let lower = text.toLowerCase().replace(/[.,!]/g, '');
+    
+    const numMap = { 'one': '1', 'two': '2', 'three': '3', 'four': '4', 'five': '5', 'six': '6', 'seven': '7', 'eight': '8', 'nine': '9', 'ten': '10' };
+    Object.keys(numMap).forEach(k => {
+      const regex = new RegExp(`\\b${k}\\b`, 'g');
+      lower = lower.replace(regex, numMap[k]);
+    });
+
+    let parsed = {
+      town: town,
+      rdtSection: rdtSection,
+      route: '',
+      location: '',
+      taskType: 'Bore',
+      specNumber: '1',
+      footage: '',
+      gpsCoordinates: ''
+    };
+
+    const rdtMatch = lower.match(/rdt\s*(\d+)/);
+    if (rdtMatch) parsed.rdtSection = `RDT${rdtMatch[1]}`;
+    if (lower.includes('toll north')) parsed.rdtSection = 'Toll N';
+    if (lower.includes('toll south')) parsed.rdtSection = 'Toll S';
+
+    const routeMatch = lower.match(/route\s*(\d+)/);
+    if (routeMatch) parsed.route = String(routeMatch[1]);
+
+    const locMatch = lower.match(/location\s*(\d+)/);
+    if (locMatch) parsed.location = String(locMatch[1]);
+
+    if (lower.includes('bore')) parsed.taskType = 'Bore';
+    else if (lower.includes('trench')) parsed.taskType = 'Trench';
+    else if (lower.includes('plow')) parsed.taskType = 'Plow Duct';
+    else if (lower.includes('fiber')) parsed.taskType = 'Fiber';
+    else if (lower.includes('hand hole') || lower.includes('handhole')) parsed.taskType = 'Hand Hole';
+    else if (lower.includes('drop')) parsed.taskType = 'Drop';
+
+    const numMatch = lower.match(/number\s*(\d+)/);
+    if (numMatch) parsed.specNumber = String(numMatch[1]);
+
+    const ftMatch = lower.match(/(\d+)\s*feet/);
+    const ftMatch2 = lower.match(/(\d+)\s*foot/);
+    if (ftMatch) parsed.footage = String(ftMatch[1]);
+    else if (ftMatch2) parsed.footage = String(ftMatch2[1]);
+
+    setVoiceData(parsed);
+  };
+  
+  const submitVoiceLog = () => {
+    if (!voiceData.route || !voiceData.location) {
+      alert("Missing Route or Location in voice data!");
+      return;
+    }
+    
+    addEntry({
+      town: voiceData.town,
+      date: getLocalDateString(),
+      rdtSection: voiceData.rdtSection,
+      route: voiceData.route,
+      location: voiceData.location,
+      taskType: voiceData.taskType,
+      footage: voiceData.footage,
+      boreNumber: voiceData.taskType === 'Bore' ? voiceData.specNumber : null,
+      fiberCount: voiceData.taskType === 'Fiber' ? FIBER_COUNTS[0] : null,
+      handHoleNumber: voiceData.taskType === 'Hand Hole' ? voiceData.specNumber : null,
+      dropNumber: voiceData.taskType === 'Drop' ? voiceData.specNumber : null,
+      isAddedBore: false,
+      isFiberLoop: false,
+      loopQuantity: '',
+      hasGroundRod: false,
+      hasSign: false,
+      unitCode: '',
+      psNumber: '',
+      gpsCoordinates: voiceData.gpsCoordinates,
+      inspector: authUser.name
+    });
+    setShowVoiceModal(false);
+    setSuccessMsg(true);
+    setTimeout(() => setSuccessMsg(false), 3000);
+  };
+
   // Sync town changes to local storage
   useEffect(() => {
     localStorage.setItem('fieldTrackerTown', town);
@@ -276,6 +395,81 @@ export default function LoggingForm() {
 
   return (
     <div className="max-w-4xl mx-auto mt-8 mb-12">
+      
+      {/* Voice Confirmation Modal */}
+      {showVoiceModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 relative animate-in fade-in zoom-in duration-200">
+            <button onClick={() => setShowVoiceModal(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors">
+              <X className="h-6 w-6" />
+            </button>
+            <h3 className="text-xl font-bold text-slate-800 mb-1 flex items-center">
+              <Mic className="h-5 w-5 mr-2 text-indigo-500" /> Verify Quick Entry
+            </h3>
+            <p className="text-sm text-slate-500 mb-6 italic border-l-4 border-indigo-200 pl-3 py-1 bg-indigo-50/50 rounded-r-lg">"{voiceTranscript}"</p>
+            
+            <div className="space-y-4 mb-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 uppercase">Node</label>
+                  <input type="text" value={voiceData.rdtSection} onChange={e => setVoiceData({...voiceData, rdtSection: e.target.value})} className="w-full mt-1 p-2 border border-slate-300 rounded-lg font-semibold text-slate-800 bg-white focus:ring-2 focus:ring-indigo-500" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 uppercase">Route</label>
+                  <input type="text" value={voiceData.route} onChange={e => setVoiceData({...voiceData, route: e.target.value})} className="w-full mt-1 p-2 border border-slate-300 rounded-lg font-semibold text-slate-800 bg-white focus:ring-2 focus:ring-indigo-500" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 uppercase">Location</label>
+                  <input type="text" value={voiceData.location} onChange={e => setVoiceData({...voiceData, location: e.target.value})} className="w-full mt-1 p-2 border border-slate-300 rounded-lg font-semibold text-slate-800 bg-white focus:ring-2 focus:ring-indigo-500" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 uppercase">Task</label>
+                  <input type="text" value={voiceData.taskType} onChange={e => setVoiceData({...voiceData, taskType: e.target.value})} className="w-full mt-1 p-2 border border-slate-300 rounded-lg font-semibold text-slate-800 bg-white focus:ring-2 focus:ring-indigo-500" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 uppercase">Spec / Bore #</label>
+                  <input type="text" value={voiceData.specNumber} onChange={e => setVoiceData({...voiceData, specNumber: e.target.value})} className="w-full mt-1 p-2 border border-slate-300 rounded-lg font-semibold text-slate-800 bg-white focus:ring-2 focus:ring-indigo-500" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 uppercase">Footage</label>
+                  <input type="text" value={voiceData.footage} onChange={e => setVoiceData({...voiceData, footage: e.target.value})} className="w-full mt-1 p-2 border border-slate-300 rounded-lg font-semibold text-slate-800 bg-white focus:ring-2 focus:ring-indigo-500" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-600 uppercase mb-1 flex items-center justify-between">
+                  <span>GPS Coordinates</span>
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      if (!navigator.geolocation) return alert('GPS not supported');
+                      navigator.geolocation.getCurrentPosition(
+                        (pos) => setVoiceData({...voiceData, gpsCoordinates: `${pos.coords.latitude.toFixed(6)}, ${pos.coords.longitude.toFixed(6)}`}),
+                        () => alert('Could not get GPS location')
+                      );
+                    }}
+                    className="px-2 py-1 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded text-xs font-bold flex items-center transition-colors"
+                  >
+                    <MapPin className="h-3 w-3 mr-1" /> Get Location
+                  </button>
+                </label>
+                <input type="text" value={voiceData.gpsCoordinates} onChange={e => setVoiceData({...voiceData, gpsCoordinates: e.target.value})} placeholder="e.g. 36.7820, -96.6575" className="w-full p-2 border border-slate-300 rounded-lg font-semibold text-slate-800 bg-white focus:ring-2 focus:ring-indigo-500" />
+              </div>
+            </div>
+            
+            <div className="flex space-x-3 pt-2">
+              <button onClick={() => setShowVoiceModal(false)} className="flex-1 py-3 bg-white border border-slate-300 rounded-xl text-slate-700 font-bold hover:bg-slate-50 transition-colors">Cancel</button>
+              <button onClick={submitVoiceLog} className="flex-1 py-3 bg-indigo-600 rounded-xl text-white font-bold hover:bg-indigo-700 transition-colors flex items-center justify-center">
+                <CheckCircle className="h-5 w-5 mr-2" /> Submit Log
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Job Report Card Container */}
       <div className="bg-white rounded-2xl shadow-xl border border-slate-200/90 overflow-hidden mb-8">
         
@@ -287,8 +481,18 @@ export default function LoggingForm() {
               <div className="bg-indigo-500/20 p-3 rounded-xl mr-4 border border-indigo-400/30">
                 <FileSignature className="h-7 w-7 text-indigo-300" />
               </div>
-              <div>
-                <h2 className="text-2xl font-bold text-white tracking-tight">Daily Production Log</h2>
+              <div className="flex-1">
+                <div className="flex items-center space-x-4">
+                  <h2 className="text-2xl font-bold text-white tracking-tight">Daily Production Log</h2>
+                  <button
+                    type="button"
+                    onClick={startVoiceRecognition}
+                    className={`inline-flex items-center px-3 py-1.5 border border-transparent rounded-lg shadow-sm text-xs font-bold text-white transition-colors ${isListening ? 'bg-red-500 animate-pulse' : 'bg-indigo-500 hover:bg-indigo-600'}`}
+                  >
+                    {isListening ? <MicOff className="h-4 w-4 mr-1.5" /> : <Mic className="h-4 w-4 mr-1.5" />}
+                    {isListening ? 'Listening...' : 'Quick Entry'}
+                  </button>
+                </div>
                 <p className="mt-1 text-sm text-slate-400 font-medium">Record field progress, quantities, and deficiencies</p>
               </div>
             </div>
