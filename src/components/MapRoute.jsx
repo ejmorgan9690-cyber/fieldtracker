@@ -710,8 +710,8 @@ export default function MapRoute() {
 
               {/* Custom Side Swap Redlines (from RedlinesForm) */}
               {mapMode === 'redline' && redlines && redlines.filter(r => r.swap_start_lat && r.swap_start_lng && r.swap_end_lat && r.swap_end_lng).map(redline => {
-                const startPos = [parseFloat(redline.swap_start_lat), parseFloat(redline.swap_start_lng)];
-                const endPos = [parseFloat(redline.swap_end_lat), parseFloat(redline.swap_end_lng)];
+                let startPos = [parseFloat(redline.swap_start_lat), parseFloat(redline.swap_start_lng)];
+                let endPos = [parseFloat(redline.swap_end_lat), parseFloat(redline.swap_end_lng)];
                 
                 // Geographic Midpoint using turf
                 let midCoord = startPos;
@@ -721,19 +721,23 @@ export default function MapRoute() {
                 try {
                   const pt1 = turf.point([startPos[1], startPos[0]]);
                   const pt2 = turf.point([endPos[1], endPos[0]]);
-                  const line = turf.lineString([pt1.geometry.coordinates, pt2.geometry.coordinates]);
+                  const baseLine = turf.lineString([pt1.geometry.coordinates, pt2.geometry.coordinates]);
                   
-                  // Midpoint
-                  const midPt = turf.along(line, turf.length(line, {units: 'feet'}) / 2, {units: 'feet'});
+                  // Offset the side swap by 50 feet so it visibly jumps off the main route
+                  const offsetLine = turf.lineOffset(baseLine, 50, {units: 'feet'});
+                  const swapCoords = offsetLine.geometry.coordinates.map(c => [c[1], c[0]]);
+                  
+                  // Midpoint of the new offset line
+                  const midPt = turf.along(offsetLine, turf.length(offsetLine, {units: 'feet'}) / 2, {units: 'feet'});
                   midCoord = [midPt.geometry.coordinates[1], midPt.geometry.coordinates[0]];
                   
-                  // Perpendicular bracket ticks (30 feet inward)
-                  const bearing = turf.bearing(pt1, pt2);
-                  const startTick = turf.destination(pt1, 30, bearing - 90, {units: 'feet'});
-                  const endTick = turf.destination(pt2, 30, bearing - 90, {units: 'feet'});
+                  // Bracket lines connecting the original GPS coordinates to the offset side swap
+                  bracketStart = [startPos, swapCoords[0]];
+                  bracketEnd = [endPos, swapCoords[swapCoords.length - 1]];
                   
-                  bracketStart = [startPos, [startTick.geometry.coordinates[1], startTick.geometry.coordinates[0]]];
-                  bracketEnd = [endPos, [endTick.geometry.coordinates[1], endTick.geometry.coordinates[0]]];
+                  // The main line we draw is the offset line
+                  startPos = swapCoords[0];
+                  endPos = swapCoords[swapCoords.length - 1];
                 } catch (e) {
                   console.warn("Midpoint calc failed for side swap", e);
                 }
