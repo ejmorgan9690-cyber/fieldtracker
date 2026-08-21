@@ -286,6 +286,8 @@ export default function LoggingForm() {
       newPhrases = newPhrases.replace(/\bboard\b/gi, 'bore')
                              .replace(/\bboar\b/gi, 'bore')
                              .replace(/\bbored\b/gi, 'bore')
+                             .replace(/\bplough\b/gi, 'plow')
+                             .replace(/\bploughed\b/gi, 'plow')
                              .replace(/\b4\s+number\b/gi, 'bore number') // "bore number" misheard as "four number" -> translates to "4 number" above
                              .replace(/\ba\s+(\d+)/gi, '$1 ');
 
@@ -363,12 +365,22 @@ export default function LoggingForm() {
       lower = lower.replace(locMatch[0], ''); // Scrub to prevent number cross-talk
     }
 
-    if (lower.includes('bore') || lower.includes('board') || lower.includes('boar')) parsed.taskType = 'Bore';
-    else if (lower.includes('trench')) parsed.taskType = 'Trench';
-    else if (lower.includes('plow')) parsed.taskType = 'Plow Duct';
-    else if (lower.includes('fiber')) parsed.taskType = 'Fiber';
-    else if (lower.includes('hand hole') || lower.includes('handhole')) parsed.taskType = 'Hand Hole';
-    else if (lower.includes('drop')) parsed.taskType = 'Drop';
+    const boreIdx = Math.max(lower.lastIndexOf('bore'), lower.lastIndexOf('board'), lower.lastIndexOf('boar'));
+    const trenchIdx = lower.lastIndexOf('trench');
+    const plowIdx = Math.max(lower.lastIndexOf('plow'), lower.lastIndexOf('plough'), lower.lastIndexOf('cloud'));
+    const fiberIdx = lower.lastIndexOf('fiber');
+    const hhIdx = Math.max(lower.lastIndexOf('hand hole'), lower.lastIndexOf('handhole'));
+    const dropIdx = lower.lastIndexOf('drop');
+
+    const maxIdx = Math.max(boreIdx, trenchIdx, plowIdx, fiberIdx, hhIdx, dropIdx);
+    if (maxIdx !== -1) {
+      if (maxIdx === boreIdx) parsed.taskType = 'Bore';
+      else if (maxIdx === trenchIdx) parsed.taskType = 'Trench';
+      else if (maxIdx === plowIdx) parsed.taskType = 'Plow Duct';
+      else if (maxIdx === fiberIdx) parsed.taskType = 'Fiber';
+      else if (maxIdx === hhIdx) parsed.taskType = 'Hand Hole';
+      else if (maxIdx === dropIdx) parsed.taskType = 'Drop';
+    }
 
     // Look for numbers trailing words like "bore", "drop", etc. (Handles "bore number 1" or "bore 1")
     const numMatch = lower.match(/(?:number|bore|drop|hole)\s*(?:number\s*)?(\d+)/);
