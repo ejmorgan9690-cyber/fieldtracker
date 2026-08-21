@@ -1,11 +1,12 @@
 import React, { useMemo, useState } from 'react';
 import { useAppContext, formatDate } from '../context/AppContext';
-import { ClipboardList, Trash2 } from 'lucide-react';
+import { ClipboardList, ZoomIn, ZoomOut } from 'lucide-react';
 
 export default function MasterGigList() {
   const { entries, gigs, authUser, clearData } = useAppContext();
   const [filterDate, setFilterDate] = useState('');
   const [filterInspector, setFilterInspector] = useState('');
+  const [compactView, setCompactView] = useState(false);
 
   // Combine legacy and new gigs
   const gigList = useMemo(() => {
@@ -15,9 +16,6 @@ export default function MasterGigList() {
         id: e.id,
         date: e.date,
         inspector: e.inspector,
-        rdtSection: e.rdtSection,
-        route: e.route,
-        location: e.location,
         description: e.incompletionReason,
         isLegacy: true,
         sharedWithResident: true // Legacy production items are already shared
@@ -27,11 +25,6 @@ export default function MasterGigList() {
 
     if (authUser?.role === 'Resident') {
       newGigs = newGigs.filter(g => g.sharedWithResident);
-    } else if (authUser?.role === 'Inspector') {
-      // If inspector is viewing master list, only show their own, OR maybe they don't even see MasterGigList?
-      // Wait, inspectors have their own GigList.jsx tab! MasterGigList is for residents/supervisors!
-      // I'll leave Inspector filtering out of MasterGigList just in case they have access to it, 
-      // but actually it's fine.
     }
 
     let combined = [...legacy, ...newGigs];
@@ -84,6 +77,14 @@ export default function MasterGigList() {
             {(filterDate || filterInspector) && (
                <button onClick={() => { setFilterDate(''); setFilterInspector(''); }} className="text-sm font-medium text-red-600 hover:text-red-800 transition-colors">Clear</button>
             )}
+
+             <button
+               onClick={() => setCompactView(!compactView)}
+               className="flex items-center text-sm font-bold text-slate-500 hover:text-indigo-600 transition-colors bg-slate-50 hover:bg-slate-100 px-3 py-2 rounded-lg ml-2"
+             >
+               {compactView ? <ZoomIn className="h-4 w-4 mr-2" /> : <ZoomOut className="h-4 w-4 mr-2" />}
+               {compactView ? 'Zoom In' : 'Zoom Out'}
+             </button>
           </div>
         </div>
 
@@ -93,25 +94,25 @@ export default function MasterGigList() {
               <table className="min-w-full divide-y divide-slate-200">
                 <thead className="bg-slate-50">
                   <tr>
-                    <th scope="col" className="px-8 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Date</th>
-                    <th scope="col" className="px-8 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Inspector</th>
-                    <th scope="col" className="px-8 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Description of Deficiency</th>
-                    <th scope="col" className="px-8 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Audio Data</th>
+                    <th scope="col" className={`text-left font-bold text-slate-500 uppercase tracking-wider ${compactView ? 'px-2 py-2 text-[10px]' : 'px-8 py-4 text-xs'}`}>Date</th>
+                    <th scope="col" className={`text-left font-bold text-slate-500 uppercase tracking-wider ${compactView ? 'px-2 py-2 text-[10px]' : 'px-8 py-4 text-xs'}`}>Inspector</th>
+                    <th scope="col" className={`text-left font-bold text-slate-500 uppercase tracking-wider ${compactView ? 'px-2 py-2 text-[10px]' : 'px-8 py-4 text-xs'}`}>Description of Deficiency</th>
+                    <th scope="col" className={`text-left font-bold text-slate-500 uppercase tracking-wider ${compactView ? 'px-2 py-2 text-[10px]' : 'px-8 py-4 text-xs'}`}>Audio Data</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-slate-100">
                   {gigList.map((row, idx) => (
                     <tr key={idx} className={`hover:bg-slate-50 transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}`}>
-                      <td className="px-8 py-4 whitespace-nowrap text-sm font-medium text-slate-900">{formatDate(row.date)}</td>
-                      <td className="px-8 py-4 whitespace-nowrap text-sm font-bold text-indigo-600">{row.inspector}</td>
-                      <td className="px-8 py-4 text-sm text-slate-700 font-medium">
+                      <td className={`whitespace-nowrap font-medium text-slate-900 ${compactView ? 'px-2 py-2 text-[11px]' : 'px-8 py-4 text-sm'}`}>{formatDate(row.date)}</td>
+                      <td className={`whitespace-nowrap font-bold text-indigo-600 ${compactView ? 'px-2 py-2 text-[11px]' : 'px-8 py-4 text-sm'}`}>{row.inspector}</td>
+                      <td className={`font-medium text-slate-700 ${compactView ? 'px-2 py-2 text-[11px] leading-tight min-w-[120px]' : 'px-8 py-4 text-sm'}`}>
                         {row.description ? row.description : <span className="italic text-slate-400">No text provided</span>}
                       </td>
-                      <td className="px-8 py-4 whitespace-nowrap text-sm text-slate-700">
+                      <td className={`whitespace-nowrap text-slate-700 ${compactView ? 'px-2 py-2' : 'px-8 py-4'}`}>
                         {row.audioData ? (
-                           <audio src={row.audioData} controls className="h-8 w-48" />
+                           <audio src={row.audioData} controls className={compactView ? 'h-6 w-32 origin-left transform scale-75' : 'h-8 w-48'} />
                         ) : (
-                           <span className="italic text-slate-400 text-xs">No audio</span>
+                           <span className={`italic text-slate-400 ${compactView ? 'text-[10px]' : 'text-xs'}`}>No audio</span>
                         )}
                       </td>
                     </tr>

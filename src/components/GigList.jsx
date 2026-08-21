@@ -1,10 +1,11 @@
 import React, { useMemo, useState, useRef } from 'react';
 import { useAppContext, formatDate } from '../context/AppContext';
-import { ClipboardList, Plus, X, Trash2, AlertCircle, Mic, Square, Send, CheckCircle2, ListChecks } from 'lucide-react';
+import { ClipboardList, Plus, X, Trash2, AlertCircle, Mic, Square, Send, CheckCircle2, ListChecks, ZoomIn, ZoomOut } from 'lucide-react';
 
 export default function GigList() {
   const { entries, gigs, authUser, addGig, deleteGig, shareGig } = useAppContext();
   const [showForm, setShowForm] = useState(false);
+  const [compactView, setCompactView] = useState(false);
   
   // Multi-select state
   const [selectedGigs, setSelectedGigs] = useState(new Set());
@@ -155,9 +156,7 @@ export default function GigList() {
         </div>
         <button
           onClick={() => setShowForm(!showForm)}
-          className={`flex items-center px-5 py-2.5 rounded-lg font-bold shadow-md transition-all ${
-            showForm ? 'bg-slate-200 text-slate-700 hover:bg-slate-300' : 'bg-red-600 text-white hover:bg-red-700 hover:shadow-lg'
-          }`}
+          className={`flex items-center px-5 py-2.5 rounded-lg font-bold shadow-md transition-all ${showForm ? 'bg-slate-200 text-slate-700 hover:bg-slate-300' : 'bg-red-600 text-white hover:bg-red-700 hover:shadow-lg'}`}
         >
           {showForm ? (
             <><X className="h-5 w-5 mr-2" /> Cancel</>
@@ -239,8 +238,8 @@ export default function GigList() {
       )}
 
       <div className="bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden">
-        <div className="px-8 py-6 border-b border-slate-200 bg-white flex items-center justify-between">
-          <div className="flex items-center">
+        <div className={`flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-slate-200 bg-white ${compactView ? 'p-4' : 'px-8 py-6'}`}>
+          <div className="flex items-center mb-3 sm:mb-0">
             <div className="bg-red-100 p-3 rounded-full mr-4">
                <ClipboardList className="h-6 w-6 text-red-600" />
             </div>
@@ -249,8 +248,17 @@ export default function GigList() {
               <p className="mt-1 text-sm text-slate-500">Deficiencies logged by <span className="font-semibold text-indigo-600">{authUser?.name}</span>.</p>
             </div>
           </div>
-          <div className="hidden sm:flex text-sm text-slate-400 items-center">
-             <ListChecks className="h-4 w-4 mr-2" /> Click rows to batch send
+          <div className="flex items-center space-x-4">
+             <div className="hidden sm:flex text-sm text-slate-400 items-center border-r border-slate-200 pr-4">
+               <ListChecks className="h-4 w-4 mr-2" /> Batch send
+             </div>
+             <button
+               onClick={() => setCompactView(!compactView)}
+               className="flex items-center text-sm font-bold text-slate-500 hover:text-indigo-600 transition-colors bg-slate-50 hover:bg-slate-100 px-3 py-2 rounded-lg"
+             >
+               {compactView ? <ZoomIn className="h-4 w-4 mr-2" /> : <ZoomOut className="h-4 w-4 mr-2" />}
+               {compactView ? 'Zoom In' : 'Zoom Out'}
+             </button>
           </div>
         </div>
 
@@ -259,11 +267,11 @@ export default function GigList() {
             <table className="min-w-full divide-y divide-slate-200 select-none">
               <thead className="bg-slate-50">
                 <tr>
-                  <th scope="col" className="px-8 py-4 w-12 text-center text-xs font-bold text-slate-500 uppercase tracking-wider"></th>
-                  <th scope="col" className="px-4 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Date</th>
-                  <th scope="col" className="px-8 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Description of Deficiency</th>
-                  <th scope="col" className="px-8 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Audio</th>
-                  <th scope="col" className="px-8 py-4 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">Action</th>
+                  <th scope="col" className={`text-center font-bold text-slate-500 uppercase tracking-wider ${compactView ? 'px-2 py-2 text-[10px] w-8' : 'px-8 py-4 text-xs w-12'}`}></th>
+                  <th scope="col" className={`text-left font-bold text-slate-500 uppercase tracking-wider ${compactView ? 'px-2 py-2 text-[10px]' : 'px-4 py-4 text-xs'}`}>Date</th>
+                  <th scope="col" className={`text-left font-bold text-slate-500 uppercase tracking-wider ${compactView ? 'px-2 py-2 text-[10px]' : 'px-8 py-4 text-xs'}`}>Description of Deficiency</th>
+                  <th scope="col" className={`text-left font-bold text-slate-500 uppercase tracking-wider ${compactView ? 'px-2 py-2 text-[10px]' : 'px-8 py-4 text-xs'}`}>Audio</th>
+                  <th scope="col" className={`text-center font-bold text-slate-500 uppercase tracking-wider ${compactView ? 'px-2 py-2 text-[10px]' : 'px-8 py-4 text-xs'}`}>Action</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-slate-100">
@@ -276,35 +284,33 @@ export default function GigList() {
                   <tr 
                     key={idx} 
                     onClick={() => { if(canSelect) toggleSelection(row.id); }}
-                    className={`transition-colors duration-200 ${
-                      isSelected ? 'bg-indigo-50/80 cursor-pointer' : isSent ? 'bg-emerald-50/30' : canSelect ? (idx % 2 === 0 ? 'bg-white hover:bg-slate-50 cursor-pointer' : 'bg-slate-50/50 hover:bg-slate-100 cursor-pointer') : (idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50')
-                    }`}
+                    className={`transition-colors duration-200 ${isSelected ? 'bg-indigo-50/80 cursor-pointer' : isSent ? 'bg-emerald-50/30' : canSelect ? (idx % 2 === 0 ? 'bg-white hover:bg-slate-50 cursor-pointer' : 'bg-slate-50/50 hover:bg-slate-100 cursor-pointer') : (idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50')}`}
                   >
-                    <td className="px-8 py-4 whitespace-nowrap text-center">
+                    <td className={`whitespace-nowrap text-center ${compactView ? 'px-2 py-2' : 'px-8 py-4'}`}>
                        {canSelect ? (
-                         <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${isSelected ? 'bg-indigo-600 border-indigo-600' : 'border-slate-300 bg-white'}`}>
-                            {isSelected && <CheckCircle2 className="h-4 w-4 text-white" />}
+                         <div className={`rounded border flex items-center justify-center transition-colors mx-auto ${compactView ? 'w-4 h-4' : 'w-5 h-5'} ${isSelected ? 'bg-indigo-600 border-indigo-600' : 'border-slate-300 bg-white'}`}>
+                            {isSelected && <CheckCircle2 className={`text-white ${compactView ? 'h-3 w-3' : 'h-4 w-4'}`} />}
                          </div>
                        ) : isSent ? (
-                         <CheckCircle2 className="h-5 w-5 text-emerald-500 opacity-50" title="Already Sent" />
+                         <CheckCircle2 className={`text-emerald-500 opacity-50 mx-auto ${compactView ? 'h-4 w-4' : 'h-5 w-5'}`} title="Already Sent" />
                        ) : null}
                     </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-slate-900">{formatDate(row.date)}</td>
-                    <td className="px-8 py-4 text-sm text-slate-700 font-medium">
+                    <td className={`whitespace-nowrap font-medium text-slate-900 ${compactView ? 'px-2 py-2 text-[11px]' : 'px-4 py-4 text-sm'}`}>{formatDate(row.date)}</td>
+                    <td className={`font-medium text-slate-700 ${compactView ? 'px-2 py-2 text-[11px] leading-tight min-w-[120px]' : 'px-8 py-4 text-sm'}`}>
                       {row.description ? row.description : <span className="text-slate-400 italic">No text provided</span>}
                     </td>
-                    <td className="px-8 py-4 whitespace-nowrap" onClick={e => e.stopPropagation()}>
+                    <td className={`whitespace-nowrap ${compactView ? 'px-2 py-2' : 'px-8 py-4'}`} onClick={e => e.stopPropagation()}>
                       {row.audioData ? (
-                        <audio src={row.audioData} controls className="h-8 w-48" />
+                        <audio src={row.audioData} controls className={compactView ? 'h-6 w-32 origin-left transform scale-75' : 'h-8 w-48'} />
                       ) : (
-                        <span className="text-slate-400 text-sm italic flex items-center">
-                          <Mic className="h-3 w-3 mr-1 opacity-50" /> No audio
+                        <span className={`text-slate-400 italic flex items-center ${compactView ? 'text-[10px]' : 'text-sm'}`}>
+                          <Mic className={`opacity-50 mr-1 ${compactView ? 'h-2 w-2' : 'h-3 w-3'}`} /> No audio
                         </span>
                       )}
                     </td>
-                    <td className="px-8 py-4 whitespace-nowrap text-center" onClick={e => e.stopPropagation()}>
+                    <td className={`whitespace-nowrap text-center ${compactView ? 'px-2 py-2' : 'px-8 py-4'}`} onClick={e => e.stopPropagation()}>
                       {!row.isLegacy && (
-                        <div className="flex items-center justify-center space-x-2">
+                        <div className="flex items-center justify-center space-x-1 sm:space-x-2">
                           {!isSent ? (
                             <button
                               onClick={(e) => {
@@ -313,14 +319,14 @@ export default function GigList() {
                                   shareGig(row.id);
                                 }
                               }}
-                              className="text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 p-2 rounded-lg transition-colors"
+                              className={`text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded-lg transition-colors ${compactView ? 'p-1' : 'p-2'}`}
                               title="Send to Resident"
                             >
-                              <Send className="h-5 w-5 mx-auto" />
+                              <Send className={`mx-auto ${compactView ? 'h-4 w-4' : 'h-5 w-5'}`} />
                             </button>
                           ) : (
-                            <div className="text-emerald-600 p-2" title="Sent to Resident">
-                              <CheckCircle2 className="h-5 w-5 mx-auto" />
+                            <div className={`text-emerald-600 ${compactView ? 'p-1' : 'p-2'}`} title="Sent to Resident">
+                              <CheckCircle2 className={`mx-auto ${compactView ? 'h-4 w-4' : 'h-5 w-5'}`} />
                             </div>
                           )}
                           <button
@@ -331,10 +337,10 @@ export default function GigList() {
                                 if(isSelected) toggleSelection(row.id);
                               }
                             }}
-                            className="text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded-lg transition-colors"
+                            className={`text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors ${compactView ? 'p-1' : 'p-2'}`}
                             title="Delete gig"
                           >
-                            <Trash2 className="h-5 w-5 mx-auto" />
+                            <Trash2 className={`mx-auto ${compactView ? 'h-4 w-4' : 'h-5 w-5'}`} />
                           </button>
                         </div>
                       )}
