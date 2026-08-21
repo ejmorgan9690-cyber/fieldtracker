@@ -104,6 +104,7 @@ export default function LoggingForm() {
   };
 
   const [date, setDate] = useState(getLocalDateString());
+  const [dateManuallyChanged, setDateManuallyChanged] = useState(false);
   const [taskType, setTaskType] = useState('Bore');
   const [psNumber, setPsNumber] = useState('');
   const [boreNumber, setBoreNumber] = useState('1');
@@ -113,7 +114,28 @@ export default function LoggingForm() {
   const [fiberCount, setFiberCount] = useState(FIBER_COUNTS[0]);
   
   // Persist town across app reloads
-  const [town, setTown] = useState(() => localStorage.getItem('fieldTrackerTown') || 'Shidler');
+  const [town, setTown] = useState(() => localStorage.getItem('fieldTrackerTown') || '');
+
+  // --- Auto-Update Date to Today (unless manually overridden) ---
+  useEffect(() => {
+    const handleVisibility = () => {
+      // If the user brings the app to the foreground on a new day, update the date
+      if (document.visibilityState === 'visible' && !dateManuallyChanged) {
+        setDate(getLocalDateString());
+      }
+    };
+    
+    // Check periodically in case they just leave the screen on over midnight
+    const interval = setInterval(() => {
+      if (!dateManuallyChanged) setDate(getLocalDateString());
+    }, 60000);
+
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+      clearInterval(interval);
+    };
+  }, [dateManuallyChanged]);
   
   const [rdtSection, setRdtSection] = useState('RDT1');
   const [route, setRoute] = useState('1');
@@ -578,7 +600,10 @@ export default function LoggingForm() {
                   type="date"
                   id="date"
                   value={date}
-                  onChange={(e) => setDate(e.target.value)}
+                  onChange={(e) => {
+                    setDate(e.target.value);
+                    setDateManuallyChanged(true);
+                  }}
                   className="block w-full px-4 py-3 rounded-lg border border-slate-300 bg-white text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 shadow-sm transition-all font-medium"
                   required
                 />
