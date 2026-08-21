@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAppContext } from '../context/AppContext';
-import { HardHat, LogOut, UserCircle, Activity, FileText, CalendarDays, ClipboardList, Map, Target, Calculator, CheckCircle } from 'lucide-react';
+import { HardHat, LogOut, UserCircle, Activity, FileText, CalendarDays, ClipboardList, Map, Target, Calculator, CheckCircle, Mic } from 'lucide-react';
 
 export default function Navigation() {
   const { authUser, activeTab, setActiveTab, logout } = useAppContext();
