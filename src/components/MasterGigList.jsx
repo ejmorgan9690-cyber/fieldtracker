@@ -6,7 +6,7 @@ export default function MasterGigList() {
   const { entries, gigs, authUser, clearData } = useAppContext();
   const [filterDate, setFilterDate] = useState('');
   const [filterInspector, setFilterInspector] = useState('');
-  const [compactView, setCompactView] = useState(false);
+  const compactView = true;
 
   // Combine legacy and new gigs
   const gigList = useMemo(() => {
@@ -78,13 +78,6 @@ export default function MasterGigList() {
                <button onClick={() => { setFilterDate(''); setFilterInspector(''); }} className="text-sm font-medium text-red-600 hover:text-red-800 transition-colors">Clear</button>
             )}
 
-             <button
-               onClick={() => setCompactView(!compactView)}
-               className="flex items-center text-sm font-bold text-slate-500 hover:text-indigo-600 transition-colors bg-slate-50 hover:bg-slate-100 px-3 py-2 rounded-lg ml-2"
-             >
-               {compactView ? <ZoomIn className="h-4 w-4 mr-2" /> : <ZoomOut className="h-4 w-4 mr-2" />}
-               {compactView ? 'Zoom In' : 'Zoom Out'}
-             </button>
           </div>
         </div>
 

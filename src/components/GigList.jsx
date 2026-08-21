@@ -5,7 +5,7 @@ import { ClipboardList, Plus, X, Trash2, AlertCircle, Mic, Square, Send, CheckCi
 export default function GigList() {
   const { entries, gigs, authUser, addGig, deleteGig, shareGig } = useAppContext();
   const [showForm, setShowForm] = useState(false);
-  const [compactView, setCompactView] = useState(false);
+  const compactView = true;
   
   // Multi-select state
   const [selectedGigs, setSelectedGigs] = useState(new Set());
@@ -249,16 +249,9 @@ export default function GigList() {
             </div>
           </div>
           <div className="flex items-center space-x-4">
-             <div className="hidden sm:flex text-sm text-slate-400 items-center border-r border-slate-200 pr-4">
+             <div className="hidden sm:flex text-sm text-slate-400 items-center">
                <ListChecks className="h-4 w-4 mr-2" /> Batch send
              </div>
-             <button
-               onClick={() => setCompactView(!compactView)}
-               className="flex items-center text-sm font-bold text-slate-500 hover:text-indigo-600 transition-colors bg-slate-50 hover:bg-slate-100 px-3 py-2 rounded-lg"
-             >
-               {compactView ? <ZoomIn className="h-4 w-4 mr-2" /> : <ZoomOut className="h-4 w-4 mr-2" />}
-               {compactView ? 'Zoom In' : 'Zoom Out'}
-             </button>
           </div>
         </div>
 
