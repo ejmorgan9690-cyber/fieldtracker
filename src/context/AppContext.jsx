@@ -20,6 +20,7 @@ export const AppProvider = ({ children }) => {
   const [dailies, setDailies] = useState([]);
   const [gigs, setGigs] = useState([]);
   const [redlines, setRedlines] = useState([]);
+  const [notes, setNotes] = useState([]);
   const [activeTab, setActiveTab] = useState('log');
 
   useEffect(() => {
@@ -79,6 +80,14 @@ export const AppProvider = ({ children }) => {
           localStorage.setItem('fieldTrackerRedlines', JSON.stringify(mappedRedlines));
         }
 
+        const { data: notesData, error: notesError } = await supabase.from('notes').select('*');
+        if (notesError) {
+          console.error('Error fetching notes from Supabase:', notesError);
+        } else if (notesData) {
+          setNotes(notesData);
+          localStorage.setItem('fieldTrackerNotes', JSON.stringify(notesData));
+        }
+
       } catch (err) {
         console.error('Unexpected error fetching from Supabase:', err);
       }
@@ -103,6 +112,9 @@ export const AppProvider = ({ children }) => {
 
       const savedRedlines = localStorage.getItem('fieldTrackerRedlines');
       if (savedRedlines && savedRedlines !== 'undefined') setRedlines(JSON.parse(savedRedlines));
+
+      const savedNotes = localStorage.getItem('fieldTrackerNotes');
+      if (savedNotes && savedNotes !== 'undefined') setNotes(JSON.parse(savedNotes));
     } catch (e) {
       console.error('Failed to parse saved local data:', e);
     }
@@ -381,16 +393,54 @@ export const AppProvider = ({ children }) => {
     localStorage.setItem('fieldTrackerRedlines', JSON.stringify(newRedlines));
   };
 
+  const addNote = async (note) => {
+    try {
+      const supabasePayload = {
+        inspector_name: note.inspector,
+        service_date: note.date,
+        town: note.town,
+        notes_text: note.notesText,
+        gps_coordinates: note.gpsCoordinates,
+        audio_data: note.audioData
+      };
+
+      const { data, error } = await supabase.from('notes').insert([supabasePayload]).select();
+      if (error) console.error("Error saving note to Supabase:", error);
+
+      const newNotes = [...notes, { ...supabasePayload, id: data && data.length > 0 ? data[0].id : Date.now().toString() }];
+      setNotes(newNotes);
+      localStorage.setItem('fieldTrackerNotes', JSON.stringify(newNotes));
+    } catch (err) {
+      console.error("Error in addNote:", err);
+      const newNotes = [...notes, { ...note, id: Date.now().toString() }];
+      setNotes(newNotes);
+      localStorage.setItem('fieldTrackerNotes', JSON.stringify(newNotes));
+    }
+  };
+
+  const deleteNote = async (id) => {
+    try {
+      await supabase.from('notes').delete().eq('id', id);
+      const newNotes = notes.filter(n => n.id !== id);
+      setNotes(newNotes);
+      localStorage.setItem('fieldTrackerNotes', JSON.stringify(newNotes));
+    } catch (err) {
+      console.error("Error deleting note:", err);
+    }
+  };
+
   const clearData = () => {
     if (window.confirm('Clear all production logs AND daily reports?')) {
       setEntries([]);
       setDailies([]);
       setGigs([]);
       setRedlines([]);
+      setNotes([]);
       localStorage.removeItem('fieldTrackerEntries');
       localStorage.removeItem('fieldTrackerDailies');
       localStorage.removeItem('fieldTrackerGigs');
       localStorage.removeItem('fieldTrackerRedlines');
+      localStorage.removeItem('fieldTrackerNotes');
     }
   }
 
@@ -401,6 +451,7 @@ export const AppProvider = ({ children }) => {
       dailies, addDaily, deleteDaily,
       gigs, addGig, deleteGig,
       redlines, addRedline, deleteRedline,
+      notes, addNote, deleteNote,
       activeTab, setActiveTab, clearData 
     }}>
       {children}
