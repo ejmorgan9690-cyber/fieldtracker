@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useAppContext } from '../context/AppContext';
+import { useAppContext, formatDate } from '../context/AppContext';
 import { Mic, MapPin, Trash2, Calendar, User, FileText, Search } from 'lucide-react';
 
 export default function MasterNotes() {
@@ -59,7 +59,7 @@ export default function MasterNotes() {
                     <td className={`${compactView ? 'px-2 py-2' : 'px-6 py-4'} whitespace-nowrap`}>
                       <div className={`flex items-center font-bold mb-1 text-slate-900 ${compactView ? 'text-[10px]' : 'text-sm'}`}>
                         <Calendar className={`${compactView ? 'h-3 w-3' : 'h-4 w-4'} mr-2 text-slate-400`} />
-                        {note.service_date}
+                        {formatDate(note.service_date)}
                       </div>
                       {note.town && note.town !== 'N/A' && (
                         <span className={`inline-flex items-center rounded-full font-medium bg-indigo-100 text-indigo-800 mt-1 ${compactView ? 'px-1.5 py-0.5 text-[9px]' : 'px-2.5 py-0.5 text-xs'}`}>
